@@ -1,0 +1,221 @@
+/* ========================
+   POS Selection Page
+   ======================== */
+
+.pos-select-page {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #0a0e1a 0%, #111827 100%);
+}
+
+/* Header */
+.pos-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-glass);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+}
+
+.pos-header-title {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffffff, #94a3b8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.pos-header-subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.pos-header-subtitle strong {
+    color: var(--accent-primary);
+}
+
+/* Content */
+.pos-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    overflow-y: auto;
+}
+
+/* POS Grid */
+.pos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+    width: 100%;
+    max-width: 1100px;
+}
+
+/* POS Card */
+.pos-card {
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.pos-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.pos-card:hover::before {
+    opacity: 1;
+}
+
+.pos-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-glow-green);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.pos-card-opening {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.pos-card-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.pos-card-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.pos-card-location {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.pos-card-action {
+    margin-top: 8px;
+}
+
+.pos-card-open-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-primary);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.pos-card-opening-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Status badges */
+.pos-card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 6px 14px;
+    border-radius: 8px;
+}
+
+.pos-badge-open {
+    color: var(--accent-primary);
+}
+
+.pos-badge-continue {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-primary), #047857);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.pos-badge-locked {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Locked card */
+.pos-card-locked {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.pos-card-locked:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.pos-card-locked::before {
+    display: none;
+}
+
+/* Loading */
+.pos-loading {
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.pos-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-glass);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+}
+
+/* Error */
+.pos-error {
+    text-align: center;
+    color: #fca5a5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.pos-error-icon {
+    font-size: 40px;
+}
+
+/* Empty */
+.pos-empty {
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.pos-empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+}

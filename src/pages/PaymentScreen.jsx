@@ -1,0 +1,302 @@
+import React, { useState, useMemo } from 'react';
+import './PaymentScreen.css';
+
+const PAYMENT_METHODS = [
+    { id: 'cash', name: 'Tiền mặt', icon: '💵' },
+    { id: 'card', name: 'Thẻ ngân hàng', icon: '💳' },
+    { id: 'transfer', name: 'Chuyển khoản', icon: '🏦' },
+    { id: 'momo', name: 'MoMo', icon: '📱' },
+];
+
+function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete }) {
+    const { customers = [] } = posData || {};
+    const orderItems = table.orderItems || [];
+    const billDiscount = table.billDiscount || { type: 'percent', value: 0 };
+
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [selectedPayment, setSelectedPayment] = useState('cash');
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [showCustomerList, setShowCustomerList] = useState(false);
+    const [processing, setProcessing] = useState(false);
+    const [completed, setCompleted] = useState(false);
+
+    // Calculate item total after per-item discount
+    const getItemTotal = (item) => {
+        const lineTotal = item.product.list_price * item.quantity;
+        const disc = item.discount || { type: 'percent', value: 0 };
+        if (disc.value <= 0) return lineTotal;
+        if (disc.type === 'percent') {
+            return lineTotal * (1 - Math.min(disc.value, 100) / 100);
+        }
+        return Math.max(0, lineTotal - disc.value);
+    };
+
+    // Subtotal after per-item discounts
+    const subtotal = orderItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+
+    // Total item-level discounts
+    const totalItemDiscounts = orderItems.reduce((sum, item) => {
+        const lineTotal = item.product.list_price * item.quantity;
+        return sum + (lineTotal - getItemTotal(item));
+    }, 0);
+
+    // Bill discount amount
+    const billDiscountAmount = useMemo(() => {
+        if (billDiscount.value <= 0) return 0;
+        if (billDiscount.type === 'percent') {
+            return subtotal * Math.min(billDiscount.value, 100) / 100;
+        }
+        return Math.min(billDiscount.value, subtotal);
+    }, [subtotal, billDiscount]);
+
+    // Grand total
+    const orderTotal = Math.max(0, subtotal - billDiscountAmount);
+    const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+    const rawTotal = orderItems.reduce((sum, item) => sum + item.product.list_price * item.quantity, 0);
+
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
+    };
+
+    // Filter customers
+    const filteredCustomers = useMemo(() => {
+        if (!customerSearch.trim()) return customers;
+        const q = customerSearch.toLowerCase();
+        return customers.filter(
+            (c) =>
+                c.name.toLowerCase().includes(q) ||
+                (c.phone && c.phone.includes(q)) ||
+                (c.mobile && c.mobile.includes(q)) ||
+                (c.email && c.email.toLowerCase().includes(q))
+        );
+    }, [customers, customerSearch]);
+
+    // Handle payment
+    const handlePayment = async () => {
+        setProcessing(true);
+        await new Promise((r) => setTimeout(r, 1500));
+        setProcessing(false);
+        setCompleted(true);
+    };
+
+    const handleDone = () => {
+        onComplete();
+    };
+
+    if (completed) {
+        return (
+            <div className="payment-screen">
+                <div className="payment-success slide-up">
+                    <div className="payment-success-icon">✅</div>
+                    <h1 className="payment-success-title">Thanh toán thành công!</h1>
+                    <p className="payment-success-detail">
+                        Bàn {table.number} • {formatPrice(orderTotal)}
+                    </p>
+                    {selectedCustomer && (
+                        <p className="payment-success-customer">Khách hàng: {selectedCustomer.name}</p>
+                    )}
+                    <p className="payment-success-method">
+                        Phương thức: {PAYMENT_METHODS.find((m) => m.id === selectedPayment)?.name}
+                    </p>
+                    <button className="btn btn-primary payment-done-btn" onClick={handleDone}>
+                        ✅ Hoàn tất — Về danh sách bàn
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="payment-screen">
+            {/* Header */}
+            <header className="payment-header">
+                <div className="payment-header-left">
+                    <button className="btn btn-secondary" onClick={onBack}>
+                        ← Quay lại đơn hàng
+                    </button>
+                    <div className="payment-header-info">
+                        <h1 className="payment-header-title">Thanh toán — Bàn {table.number}</h1>
+                        <p className="payment-header-meta">{posConfig.name} • {authData.user.name}</p>
+                    </div>
+                </div>
+            </header>
+
+            <div className="payment-body">
+                {/* Left: Order summary + Customer */}
+                <div className="payment-left">
+                    {/* Customer selection */}
+                    <div className="payment-section">
+                        <h3 className="payment-section-title">👤 Khách hàng</h3>
+                        <div className="payment-customer-area">
+                            {selectedCustomer ? (
+                                <div className="payment-customer-selected glass-card">
+                                    <div className="payment-customer-info">
+                                        <span className="payment-customer-name">{selectedCustomer.name}</span>
+                                        {selectedCustomer.phone && (
+                                            <span className="payment-customer-phone">📞 {selectedCustomer.phone || selectedCustomer.mobile}</span>
+                                        )}
+                                        {selectedCustomer.email && (
+                                            <span className="payment-customer-email">✉️ {selectedCustomer.email}</span>
+                                        )}
+                                    </div>
+                                    <button
+                                        className="btn btn-secondary payment-customer-change"
+                                        onClick={() => { setSelectedCustomer(null); setShowCustomerList(true); }}
+                                    >
+                                        Đổi
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="payment-customer-picker">
+                                    <div className="payment-customer-search">
+                                        <input
+                                            type="text"
+                                            className="input-field"
+                                            placeholder="🔍 Tìm khách hàng..."
+                                            value={customerSearch}
+                                            onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerList(true); }}
+                                            onFocus={() => setShowCustomerList(true)}
+                                        />
+                                    </div>
+                                    {showCustomerList && (
+                                        <div className="payment-customer-list">
+                                            <div
+                                                className="payment-customer-item"
+                                                onClick={() => { setShowCustomerList(false); }}
+                                            >
+                                                <span className="payment-customer-item-name">— Khách vãng lai —</span>
+                                            </div>
+                                            {filteredCustomers.map((customer) => (
+                                                <div
+                                                    key={customer.id}
+                                                    className="payment-customer-item"
+                                                    onClick={() => {
+                                                        setSelectedCustomer(customer);
+                                                        setShowCustomerList(false);
+                                                        setCustomerSearch('');
+                                                    }}
+                                                >
+                                                    <span className="payment-customer-item-name">{customer.name}</span>
+                                                    <span className="payment-customer-item-detail">
+                                                        {customer.phone || customer.mobile || customer.email || ''}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {filteredCustomers.length === 0 && (
+                                                <div className="payment-customer-empty">Không tìm thấy khách hàng</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Order summary */}
+                    <div className="payment-section">
+                        <h3 className="payment-section-title">📋 Đơn hàng ({totalItems} món)</h3>
+                        <div className="payment-order-list">
+                            {orderItems.map((item) => {
+                                const lineTotal = item.product.list_price * item.quantity;
+                                const itemTotal = getItemTotal(item);
+                                const hasDiscount = (item.discount?.value || 0) > 0;
+                                return (
+                                    <div key={item.product.id} className="payment-order-item">
+                                        <div className="payment-order-item-left">
+                                            <span className="payment-order-item-qty">{item.quantity}x</span>
+                                            <div className="payment-order-item-details">
+                                                <span className="payment-order-item-name">{item.product.name}</span>
+                                                {hasDiscount && (
+                                                    <span className="payment-order-item-discount">
+                                                        CK: {item.discount.type === 'percent' ? `${item.discount.value}%` : formatPrice(item.discount.value)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="payment-order-item-right">
+                                            {hasDiscount && (
+                                                <span className="payment-order-item-price-original">{formatPrice(lineTotal)}</span>
+                                            )}
+                                            <span className={`payment-order-item-price ${hasDiscount ? 'payment-order-item-price-disc' : ''}`}>
+                                                {formatPrice(itemTotal)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Payment methods + Total */}
+                <div className="payment-right">
+                    {/* Payment methods */}
+                    <div className="payment-section">
+                        <h3 className="payment-section-title">💰 Phương thức thanh toán</h3>
+                        <div className="payment-methods">
+                            {PAYMENT_METHODS.map((method) => (
+                                <div
+                                    key={method.id}
+                                    className={`payment-method-card glass-card ${selectedPayment === method.id ? 'payment-method-active' : ''}`}
+                                    onClick={() => setSelectedPayment(method.id)}
+                                >
+                                    <span className="payment-method-icon">{method.icon}</span>
+                                    <span className="payment-method-name">{method.name}</span>
+                                    {selectedPayment === method.id && (
+                                        <span className="payment-method-check">✓</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Total + Pay button */}
+                    <div className="payment-total-area">
+                        <div className="payment-total-row">
+                            <span className="payment-total-label">Tạm tính</span>
+                            <span className="payment-total-subtotal">{formatPrice(rawTotal)}</span>
+                        </div>
+                        {totalItemDiscounts > 0 && (
+                            <div className="payment-total-row payment-total-row-discount">
+                                <span className="payment-total-label">CK từng món</span>
+                                <span className="payment-total-discount-value">-{formatPrice(totalItemDiscounts)}</span>
+                            </div>
+                        )}
+                        {billDiscountAmount > 0 && (
+                            <div className="payment-total-row payment-total-row-discount">
+                                <span className="payment-total-label">
+                                    CK tổng bill ({billDiscount.type === 'percent' ? `${billDiscount.value}%` : formatPrice(billDiscount.value)})
+                                </span>
+                                <span className="payment-total-discount-value">-{formatPrice(billDiscountAmount)}</span>
+                            </div>
+                        )}
+                        <div className="payment-total-row payment-total-final">
+                            <span className="payment-total-label-big">Tổng thanh toán</span>
+                            <span className="payment-total-value-big">{formatPrice(orderTotal)}</span>
+                        </div>
+
+                        {!selectedCustomer && (
+                            <p className="payment-customer-required">⚠️ Vui lòng chọn khách hàng để thanh toán</p>
+                        )}
+                        <button
+                            className="btn btn-primary payment-pay-btn"
+                            onClick={handlePayment}
+                            disabled={processing || orderItems.length === 0 || !selectedCustomer}
+                        >
+                            {processing ? (
+                                <>
+                                    <span className="login-spinner"></span>
+                                    Đang xử lý...
+                                </>
+                            ) : (
+                                <>💳 Thanh toán {formatPrice(orderTotal)}</>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default PaymentScreen;

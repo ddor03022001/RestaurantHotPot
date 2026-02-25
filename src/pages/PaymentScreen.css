@@ -1,0 +1,417 @@
+/* ==========================
+   Payment Screen Styles
+   ========================== */
+
+.payment-screen {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #0a0e1a 0%, #111827 100%);
+}
+
+/* Header */
+.payment-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-glass);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    gap: 16px;
+}
+
+.payment-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.payment-header-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-header-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.payment-header-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Body: split layout */
+.payment-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Section title */
+.payment-section {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.payment-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+}
+
+/* ===== Left: Customer + Order summary ===== */
+.payment-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-glass);
+    overflow-y: auto;
+}
+
+/* Customer picker */
+.payment-customer-area {
+    position: relative;
+}
+
+.payment-customer-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+}
+
+.payment-customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.payment-customer-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.payment-customer-phone,
+.payment-customer-email {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.payment-customer-change {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.payment-customer-search {
+    margin-bottom: 8px;
+}
+
+.payment-customer-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.95);
+}
+
+.payment-customer-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.payment-customer-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.payment-customer-item:last-child {
+    border-bottom: none;
+}
+
+.payment-customer-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.payment-customer-item-detail {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.payment-customer-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Order summary list */
+.payment-order-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-order-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.payment-order-item:last-child {
+    border-bottom: none;
+}
+
+.payment-order-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.payment-order-item-qty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 6px;
+    background: var(--bg-glass);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.payment-order-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.payment-order-item-name {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.payment-order-item-discount {
+    font-size: 11px;
+    color: var(--accent-danger);
+    font-weight: 500;
+}
+
+.payment-order-item-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.payment-order-item-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-warning);
+}
+
+.payment-order-item-price-original {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.payment-order-item-price-disc {
+    color: var(--accent-primary);
+}
+
+/* ===== Right: Payment methods ===== */
+.payment-right {
+    width: 400px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+/* Payment methods */
+.payment-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.payment-method-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 12px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+}
+
+.payment-method-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-primary) !important;
+}
+
+.payment-method-active {
+    border-color: var(--accent-primary) !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+.payment-method-icon {
+    font-size: 28px;
+}
+
+.payment-method-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.payment-method-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Total area */
+.payment-total-area {
+    margin-top: auto;
+    padding: 20px;
+    border-top: 1px solid var(--border-glass);
+}
+
+.payment-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.payment-total-row-discount .payment-total-label {
+    color: var(--accent-danger);
+    font-size: 13px;
+}
+
+.payment-total-discount-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-danger);
+}
+
+.payment-total-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.payment-total-subtotal {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.payment-total-final {
+    padding-top: 12px;
+    border-top: 1px solid var(--border-glass);
+    margin-bottom: 20px;
+}
+
+.payment-total-label-big {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.payment-total-value-big {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent-primary);
+}
+
+/* Pay button */
+.payment-customer-required {
+    font-size: 12px;
+    color: var(--accent-warning);
+    text-align: center;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.payment-pay-btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+/* ===== Payment Success ===== */
+.payment-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 12px;
+    text-align: center;
+    padding: 40px;
+}
+
+.payment-success-icon {
+    font-size: 80px;
+    margin-bottom: 8px;
+}
+
+.payment-success-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent-primary);
+}
+
+.payment-success-detail {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+.payment-success-customer,
+.payment-success-method {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.payment-done-btn {
+    margin-top: 24px;
+    padding: 16px 40px;
+    font-size: 16px;
+}

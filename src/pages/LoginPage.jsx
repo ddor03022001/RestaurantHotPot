@@ -11,8 +11,8 @@ function LoginPage({ onLogin }) {
 
     // Restore saved connection info
     useEffect(() => {
-        const savedUrl = localStorage.getItem('hotpos_odoo_url') || 'http://localhost:8069';
-        const savedDb = localStorage.getItem('hotpos_odoo_db') || '';
+        const savedUrl = localStorage.getItem('hotpos_odoo_url') || 'https://retail.seateklab.vn';
+        const savedDb = localStorage.getItem('hotpos_odoo_db') || 'dngretaildb';
         const savedUser = localStorage.getItem('hotpos_odoo_user') || '';
         setUrl(savedUrl);
         setDb(savedDb);

@@ -12,7 +12,6 @@ function createWindow() {
         minWidth: 1100,
         minHeight: 768,
         title: 'HotPos - Restaurant POS',
-        icon: path.join(__dirname, '../public/icon.png'),
         show: false,
         autoHideMenuBar: true,
         webPreferences: {
@@ -22,8 +21,8 @@ function createWindow() {
         },
     });
 
-    const isDev = process.env.NODE_ENV !== 'production';
-    if (isDev) {
+    // app.isPackaged is the reliable way to detect production in Electron
+    if (!app.isPackaged) {
         mainWindow.loadURL('http://localhost:5173');
         // mainWindow.webContents.openDevTools();
     } else {

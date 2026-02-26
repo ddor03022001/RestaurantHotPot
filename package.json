@@ -2,11 +2,39 @@
   "name": "hotpos",
   "version": "1.0.0",
   "description": "HotPos - Restaurant POS Desktop App",
-  "main": "electron/main.js",
+  "author": "HotPos",
+  "main": "app/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build && electron-builder",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.hotpos.app",
+    "productName": "HotPos",
+    "asar": false,
+    "files": [
+      "**/*",
+      "!src/**",
+      "!public/**",
+      "!release/**",
+      "!output/**",
+      "!build-output/**",
+      "!.git/**",
+      "!.gitignore",
+      "!vite.config.js",
+      "!*.md"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "react": "^18.2.0",

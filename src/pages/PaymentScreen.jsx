@@ -9,14 +9,11 @@ const PAYMENT_METHODS = [
 ];
 
 function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete }) {
-    const { customers = [] } = posData || {};
     const orderItems = table.orderItems || [];
     const billDiscount = table.billDiscount || { type: 'percent', value: 0 };
+    const selectedCustomer = table.selectedCustomer || null;
 
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [selectedPayment, setSelectedPayment] = useState('cash');
-    const [customerSearch, setCustomerSearch] = useState('');
-    const [showCustomerList, setShowCustomerList] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [completed, setCompleted] = useState(false);
 
@@ -58,18 +55,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
     };
 
-    // Filter customers
-    const filteredCustomers = useMemo(() => {
-        if (!customerSearch.trim()) return customers;
-        const q = customerSearch.toLowerCase();
-        return customers.filter(
-            (c) =>
-                c.name.toLowerCase().includes(q) ||
-                (c.phone && c.phone.includes(q)) ||
-                (c.mobile && c.mobile.includes(q)) ||
-                (c.email && c.email.toLowerCase().includes(q))
-        );
-    }, [customers, customerSearch]);
+
 
     // Handle payment
     const handlePayment = async () => {
@@ -124,7 +110,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             <div className="payment-body">
                 {/* Left: Order summary + Customer */}
                 <div className="payment-left">
-                    {/* Customer selection */}
+                    {/* Customer info (read-only, managed in OrderScreen) */}
                     <div className="payment-section">
                         <h3 className="payment-section-title">👤 Khách hàng</h3>
                         <div className="payment-customer-area">
@@ -132,61 +118,14 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                 <div className="payment-customer-selected glass-card">
                                     <div className="payment-customer-info">
                                         <span className="payment-customer-name">{selectedCustomer.name}</span>
-                                        {selectedCustomer.phone && (
+                                        {(selectedCustomer.phone || selectedCustomer.mobile) && (
                                             <span className="payment-customer-phone">📞 {selectedCustomer.phone || selectedCustomer.mobile}</span>
                                         )}
-                                        {selectedCustomer.email && (
-                                            <span className="payment-customer-email">✉️ {selectedCustomer.email}</span>
-                                        )}
                                     </div>
-                                    <button
-                                        className="btn btn-secondary payment-customer-change"
-                                        onClick={() => { setSelectedCustomer(null); setShowCustomerList(true); }}
-                                    >
-                                        Đổi
-                                    </button>
                                 </div>
                             ) : (
-                                <div className="payment-customer-picker">
-                                    <div className="payment-customer-search">
-                                        <input
-                                            type="text"
-                                            className="input-field"
-                                            placeholder="🔍 Tìm khách hàng..."
-                                            value={customerSearch}
-                                            onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerList(true); }}
-                                            onFocus={() => setShowCustomerList(true)}
-                                        />
-                                    </div>
-                                    {showCustomerList && (
-                                        <div className="payment-customer-list">
-                                            <div
-                                                className="payment-customer-item"
-                                                onClick={() => { setShowCustomerList(false); }}
-                                            >
-                                                <span className="payment-customer-item-name">— Khách vãng lai —</span>
-                                            </div>
-                                            {filteredCustomers.map((customer) => (
-                                                <div
-                                                    key={customer.id}
-                                                    className="payment-customer-item"
-                                                    onClick={() => {
-                                                        setSelectedCustomer(customer);
-                                                        setShowCustomerList(false);
-                                                        setCustomerSearch('');
-                                                    }}
-                                                >
-                                                    <span className="payment-customer-item-name">{customer.name}</span>
-                                                    <span className="payment-customer-item-detail">
-                                                        {customer.phone || customer.mobile || customer.email || ''}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                            {filteredCustomers.length === 0 && (
-                                                <div className="payment-customer-empty">Không tìm thấy khách hàng</div>
-                                            )}
-                                        </div>
-                                    )}
+                                <div className="payment-customer-selected glass-card">
+                                    <span className="payment-customer-name" style={{ color: 'var(--text-muted)' }}>🚶 Khách vãng lai</span>
                                 </div>
                             )}
                         </div>
@@ -276,12 +215,12 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         </div>
 
                         {!selectedCustomer && (
-                            <p className="payment-customer-required">⚠️ Vui lòng chọn khách hàng để thanh toán</p>
+                            <p className="payment-customer-required">⚠️ Chưa chọn khách hàng (có thể chọn ở màn hình order)</p>
                         )}
                         <button
                             className="btn btn-primary payment-pay-btn"
                             onClick={handlePayment}
-                            disabled={processing || orderItems.length === 0 || !selectedCustomer}
+                            disabled={processing || orderItems.length === 0}
                         >
                             {processing ? (
                                 <>

@@ -118,6 +118,50 @@ ipcMain.handle('odoo:getUserInfo', async () => {
     return { success: true, user: odooSession.user };
 });
 
+ipcMain.handle('odoo:getPricelists', async () => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const pricelists = await OdooService.getPricelists(url, db, uid, password);
+        return { success: true, pricelists };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('odoo:getPromotions', async () => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const promotions = await OdooService.getPromotions(url, db, uid, password);
+        return { success: true, promotions };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('odoo:getPosOrders', async (event, configId, days) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const orders = await OdooService.getPosOrders(url, db, uid, password, configId, days || 7);
+        return { success: true, orders };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('odoo:getPosOrderLines', async (event, lineIds) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const lines = await OdooService.getPosOrderLines(url, db, uid, password, lineIds);
+        return { success: true, lines };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 // ========== App Lifecycle ==========
 
 app.whenReady().then(createWindow);

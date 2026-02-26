@@ -73,19 +73,23 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                 session = result.session;
             }
 
-            // Load products, customers, categories
+            // Load products, customers, categories, pricelists, promotions
             setLoadingMessage('Đang tải sản phẩm...');
-            let products = [], customers = [], categories = [];
+            let products = [], customers = [], categories = [], pricelists = [], promotions = [];
 
             if (window.electronAPI) {
-                const [prodResult, custResult, catResult] = await Promise.all([
+                const [prodResult, custResult, catResult, plResult, promoResult] = await Promise.all([
                     window.electronAPI.getProducts(),
                     window.electronAPI.getCustomers(),
                     window.electronAPI.getPosCategories(),
+                    window.electronAPI.getPricelists(),
+                    window.electronAPI.getPromotions(),
                 ]);
                 products = prodResult.success ? prodResult.products : [];
                 customers = custResult.success ? custResult.customers : [];
                 categories = catResult.success ? catResult.categories : [];
+                pricelists = plResult.success ? plResult.pricelists : [];
+                promotions = promoResult.success ? promoResult.promotions : [];
             } else {
                 // Browser mock data
                 await new Promise((r) => setTimeout(r, 600));
@@ -114,12 +118,22 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                     { id: 3, name: 'Đồ uống', parent_id: false, sequence: 3 },
                     { id: 4, name: 'Tráng miệng', parent_id: false, sequence: 4 },
                 ];
+                pricelists = [
+                    { id: 1, name: 'Bảng giá chung', active: true },
+                    { id: 2, name: 'Bảng giá VIP', active: true },
+                    { id: 3, name: 'Bảng giá nhân viên', active: true },
+                ];
+                promotions = [
+                    { id: 1, name: 'Giảm 10% Happy Hour', discount_type: 'percentage', discount_percentage: 10, active: true },
+                    { id: 2, name: 'Giảm 50k cho bill trên 500k', discount_type: 'fixed_amount', discount_fixed_amount: 50000, active: true },
+                    { id: 3, name: 'Mua 2 tặng 1 đồ uống', discount_type: 'percentage', discount_percentage: 100, active: true },
+                ];
             }
 
             setLoadingMessage('');
             onSelectPos(
                 { ...config, session },
-                { products, customers, categories }
+                { products, customers, categories, pricelists, promotions }
             );
         } catch (err) {
             setError(err.message);

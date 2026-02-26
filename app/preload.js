@@ -23,6 +23,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPosCategories: () =>
         ipcRenderer.invoke('odoo:getPosCategories'),
 
+    // Pricelists & Promotions
+    getPricelists: () =>
+        ipcRenderer.invoke('odoo:getPricelists'),
+
+    getPromotions: () =>
+        ipcRenderer.invoke('odoo:getPromotions'),
+
+    // POS order history
+    getPosOrders: (configId, days) =>
+        ipcRenderer.invoke('odoo:getPosOrders', configId, days),
+
+    getPosOrderLines: (lineIds) =>
+        ipcRenderer.invoke('odoo:getPosOrderLines', lineIds),
+
     // Get user info
     getUserInfo: () =>
         ipcRenderer.invoke('odoo:getUserInfo'),

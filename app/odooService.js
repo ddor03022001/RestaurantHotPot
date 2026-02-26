@@ -140,6 +140,75 @@ class OdooService {
     }
 
     /**
+     * Get pricelists
+     */
+    static getPricelists(url, db, uid, password) {
+        return OdooService._execute(url, db, uid, password, 'product.pricelist', 'search_read', [[]], {
+            fields: ['id', 'name', 'currency_id', 'active'],
+        });
+    }
+
+    /**
+     * Get promotion programs (Odoo 12: sale.coupon.program or coupon.program)
+     */
+    static async getPromotions(url, db, uid, password) {
+        try {
+            // Try sale.coupon.program first (Odoo 12+)
+            return await OdooService._execute(url, db, uid, password, 'sale.coupon.program', 'search_read',
+                [[['program_type', '=', 'promotion_program']]],
+                { fields: ['id', 'name', 'discount_type', 'discount_percentage', 'discount_fixed_amount', 'active'] }
+            );
+        } catch (e) {
+            try {
+                // Fallback: coupon.program
+                return await OdooService._execute(url, db, uid, password, 'coupon.program', 'search_read',
+                    [[]],
+                    { fields: ['id', 'name', 'discount_type', 'discount_percentage', 'discount_fixed_amount', 'active'] }
+                );
+            } catch (e2) {
+                // No promotion module installed — return empty
+                return [];
+            }
+        }
+    }
+
+    /**
+     * Get POS orders for a given config, last N days
+     */
+    static async getPosOrders(url, db, uid, password, configId, days = 7) {
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - days);
+        const dateStr = dateFrom.toISOString().split('T')[0] + ' 00:00:00';
+
+        const orders = await OdooService._execute(url, db, uid, password, 'pos.order', 'search_read',
+            [[
+                ['config_id', '=', configId],
+                ['date_order', '>=', dateStr],
+            ]],
+            {
+                fields: ['id', 'name', 'date_order', 'partner_id', 'amount_total', 'amount_tax',
+                    'amount_paid', 'amount_return', 'state', 'pos_reference', 'lines',
+                    'session_id', 'user_id'],
+                order: 'date_order desc',
+            }
+        );
+        return orders;
+    }
+
+    /**
+     * Get POS order lines by order IDs
+     */
+    static getPosOrderLines(url, db, uid, password, lineIds) {
+        return OdooService._execute(url, db, uid, password, 'pos.order.line', 'search_read',
+            [[['id', 'in', lineIds]]],
+            {
+                fields: ['id', 'order_id', 'product_id', 'qty', 'price_unit',
+                    'price_subtotal', 'price_subtotal_incl', 'discount'],
+            }
+        );
+    }
+
+    /**
      * Internal: execute_kw wrapper
      */
     static _execute(url, db, uid, password, model, method, args, kwargs = {}) {

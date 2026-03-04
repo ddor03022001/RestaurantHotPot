@@ -162,6 +162,28 @@ ipcMain.handle('odoo:getPosOrderLines', async (event, lineIds) => {
     }
 });
 
+ipcMain.handle('odoo:createCustomer', async (event, data) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const customer = await OdooService.createCustomer(url, db, uid, password, data);
+        return { success: true, customer };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('odoo:closePosSession', async (event, sessionId) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        await OdooService.closePosSession(url, db, uid, password, sessionId);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 // ========== App Lifecycle ==========
 
 app.whenReady().then(createWindow);

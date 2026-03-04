@@ -25,6 +25,174 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Mock combo data — combo products have combo_lines
+    const comboData = {
+        // Key = product ID that is a combo
+        132712: {
+            name: 'Combo Lẩu Thái 2 Người',
+            lines: [
+                {
+                    id: 1,
+                    name: 'Chọn nước lẩu',
+                    required_qty: 1,
+                    products: [
+                        { id: 101, display_name: 'Nước lẩu Thái chua cay', list_price: 0 },
+                        { id: 102, display_name: 'Nước lẩu Tomyum', list_price: 0 },
+                        { id: 103, display_name: 'Nước lẩu Mala', list_price: 15000 },
+                    ],
+                },
+                {
+                    id: 2,
+                    name: 'Chọn thịt (2 phần)',
+                    required_qty: 2,
+                    products: [
+                        { id: 201, display_name: 'Bò Mỹ thái lát', list_price: 0 },
+                        { id: 202, display_name: 'Ba chỉ bò', list_price: 0 },
+                        { id: 203, display_name: 'Thịt heo cuộn nấm', list_price: 0 },
+                        { id: 204, display_name: 'Bò Wagyu A5', list_price: 50000 },
+                    ],
+                },
+                {
+                    id: 3,
+                    name: 'Chọn rau & nấm (3 phần)',
+                    required_qty: 3,
+                    products: [
+                        { id: 301, display_name: 'Rau muống', list_price: 0 },
+                        { id: 302, display_name: 'Nấm kim châm', list_price: 0 },
+                        { id: 303, display_name: 'Nấm đùi gà', list_price: 0 },
+                        { id: 304, display_name: 'Đậu phụ non', list_price: 0 },
+                        { id: 305, display_name: 'Bắp cải thảo', list_price: 0 },
+                    ],
+                },
+                {
+                    id: 4,
+                    name: 'Chọn đồ uống',
+                    required_qty: 2,
+                    products: [
+                        { id: 401, display_name: 'Trà đá', list_price: 0 },
+                        { id: 402, display_name: 'Nước ngọt Pepsi', list_price: 0 },
+                        { id: 403, display_name: 'Bia Tiger', list_price: 10000 },
+                        { id: 404, display_name: 'Sinh tố bơ', list_price: 15000 },
+                    ],
+                },
+            ],
+        },
+        999002: {
+            name: 'Combo Trái Cây Mùa Hè',
+            lines: [
+                {
+                    id: 1,
+                    name: 'Chọn trái cây chính (2 loại)',
+                    required_qty: 2,
+                    products: [
+                        { id: 501, display_name: 'Xoài cát Hòa Lộc', list_price: 0 },
+                        { id: 502, display_name: 'Sầu riêng Ri6', list_price: 30000 },
+                        { id: 503, display_name: 'Măng cụt', list_price: 0 },
+                        { id: 504, display_name: 'Chôm chôm', list_price: 0 },
+                    ],
+                },
+                {
+                    id: 2,
+                    name: 'Chọn topping',
+                    required_qty: 1,
+                    products: [
+                        { id: 601, display_name: 'Sữa đặc', list_price: 0 },
+                        { id: 602, display_name: 'Kem vanilla', list_price: 5000 },
+                        { id: 603, display_name: 'Mật ong', list_price: 0 },
+                    ],
+                },
+            ],
+        },
+    };
+
+    // Combo popup state
+    const [comboPopup, setComboPopup] = useState(null); // { productId, comboInfo }
+    const [comboSelections, setComboSelections] = useState({}); // { lineId: { productId: qty } }
+
+    // Mock production data
+    const productionData = [
+        {
+            id: 1,
+            name: 'Nước ép cam',
+            unit: 'ly',
+            materials: [
+                { id: 101, name: 'Cam tươi', unit: 'kg', default_qty: 0.3 },
+                { id: 102, name: 'Đường', unit: 'g', default_qty: 20 },
+                { id: 103, name: 'Đá viên', unit: 'viên', default_qty: 5 },
+            ],
+        },
+        {
+            id: 2,
+            name: 'Sinh tố bơ',
+            unit: 'ly',
+            materials: [
+                { id: 201, name: 'Bơ', unit: 'quả', default_qty: 0.5 },
+                { id: 202, name: 'Sữa đặc', unit: 'ml', default_qty: 30 },
+                { id: 203, name: 'Đá viên', unit: 'viên', default_qty: 5 },
+                { id: 204, name: 'Sữa tươi', unit: 'ml', default_qty: 100 },
+            ],
+        },
+        {
+            id: 3,
+            name: 'Nước lẩu Thái',
+            unit: 'phần',
+            materials: [
+                { id: 301, name: 'Nước dùng xương', unit: 'lít', default_qty: 1.5 },
+                { id: 302, name: 'Sả cây', unit: 'cây', default_qty: 2 },
+                { id: 303, name: 'Lá chanh', unit: 'lá', default_qty: 5 },
+                { id: 304, name: 'Ớt hiểm', unit: 'g', default_qty: 10 },
+                { id: 305, name: 'Nước mắm', unit: 'ml', default_qty: 30 },
+                { id: 306, name: 'Nước cốt chanh', unit: 'ml', default_qty: 20 },
+            ],
+        },
+        {
+            id: 4,
+            name: 'Gỏi cuốn',
+            unit: 'cuốn',
+            materials: [
+                { id: 401, name: 'Bánh tráng', unit: 'tấm', default_qty: 1 },
+                { id: 402, name: 'Bún', unit: 'g', default_qty: 30 },
+                { id: 403, name: 'Tôm luộc', unit: 'con', default_qty: 2 },
+                { id: 404, name: 'Rau sống', unit: 'g', default_qty: 20 },
+                { id: 405, name: 'Giá đỗ', unit: 'g', default_qty: 10 },
+            ],
+        },
+    ];
+
+    // Production popup state
+    const [showProductionPopup, setShowProductionPopup] = useState(false);
+    const [selectedProduction, setSelectedProduction] = useState(null);
+    const [productionQty, setProductionQty] = useState(1);
+    const [materialQtys, setMaterialQtys] = useState({});
+    const [productionSearch, setProductionSearch] = useState('');
+
+    const openProduction = (prod) => {
+        setSelectedProduction(prod);
+        setProductionQty(1);
+        const initialQtys = {};
+        prod.materials.forEach((m) => { initialQtys[m.id] = m.default_qty; });
+        setMaterialQtys(initialQtys);
+    };
+
+    const updateMaterialQty = (materialId, value) => {
+        const qty = parseFloat(value);
+        setMaterialQtys((prev) => ({
+            ...prev,
+            [materialId]: isNaN(qty) ? 0 : qty,
+        }));
+    };
+
+    const handleProductionConfirm = () => {
+        // Placeholder — user will implement real logic
+        console.log('Production confirm:', {
+            product: selectedProduction,
+            finishedQty: productionQty,
+            materials: materialQtys,
+        });
+        setShowProductionPopup(false);
+        setSelectedProduction(null);
+    };
+
     // Bill discount state
     const [billDiscount, setBillDiscount] = useState(table.billDiscount || { type: 'percent', value: 0 });
     const [showBillDiscount, setShowBillDiscount] = useState(false);
@@ -36,6 +204,13 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [selectedCustomer, setSelectedCustomer] = useState(table.selectedCustomer || null);
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+
+    // Create customer form
+    const [showCreateCustomer, setShowCreateCustomer] = useState(false);
+    const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '', email: '', street: '' });
+    const [creatingCustomer, setCreatingCustomer] = useState(false);
+    const [createCustomerError, setCreateCustomerError] = useState('');
+    const [localCustomers, setLocalCustomers] = useState(customers);
 
     // Pricelist & Promotion selection
     const [selectedPricelist, setSelectedPricelist] = useState(table.selectedPricelist || null);
@@ -83,12 +258,12 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(
                 (p) =>
-                    p.name.toLowerCase().includes(q) ||
+                    (p.display_name || p.name).toLowerCase().includes(q) ||
                     (p.default_code && p.default_code.toLowerCase().includes(q)) ||
                     (p.barcode && p.barcode.toLowerCase().includes(q))
             );
         }
-        return filtered;
+        return filtered.slice(0, 100);
     }, [products, selectedCategory, searchQuery]);
 
     // Filter customers
@@ -105,39 +280,176 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             );
         }
         return list.slice(0, 50);
-    }, [customers, customerSearch]);
+    }, [localCustomers, customerSearch]);
 
-    // Add product to order
-    const addToOrder = (product) => {
-        const newItems = [...orderItems];
-        const existing = newItems.find((item) => item.product.id === product.id);
-        if (existing) {
-            existing.quantity += 1;
-        } else {
-            newItems.push({ product, quantity: 1, discount: { type: 'percent', value: 0 } });
+    // Create customer handler
+    const handleCreateCustomer = async () => {
+        if (!newCustomerForm.name.trim()) {
+            setCreateCustomerError('Tên khách hàng không được để trống');
+            return;
         }
-        syncOrderItems(newItems);
+        setCreatingCustomer(true);
+        setCreateCustomerError('');
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.createCustomer(newCustomerForm);
+                if (result.success) {
+                    setLocalCustomers((prev) => [result.customer, ...prev]);
+                    syncCustomer(result.customer);
+                    setShowCreateCustomer(false);
+                    setShowCustomerPopup(false);
+                    setNewCustomerForm({ name: '', phone: '', email: '', street: '' });
+                } else {
+                    setCreateCustomerError(result.error || 'L\u1ed7i t\u1ea1o kh\u00e1ch h\u00e0ng');
+                }
+            } else {
+                // Browser mock
+                await new Promise((r) => setTimeout(r, 500));
+                const mock = { id: Date.now(), ...newCustomerForm };
+                setLocalCustomers((prev) => [mock, ...prev]);
+                syncCustomer(mock);
+                setShowCreateCustomer(false);
+                setShowCustomerPopup(false);
+                setNewCustomerForm({ name: '', phone: '', email: '', street: '' });
+            }
+        } catch (err) {
+            setCreateCustomerError(err.message);
+        } finally {
+            setCreatingCustomer(false);
+        }
     };
 
-    const updateQuantity = (productId, delta) => {
+    // Line ID counter
+    let lineIdCounter = orderItems.reduce((max, item) => Math.max(max, item.lineId || 0), 0);
+
+    // Add product to order — always creates a new line
+    const addToOrder = (product) => {
+        // Check if product is a combo
+        const combo = comboData[product.id];
+        if (combo) {
+            // Initialize combo selections
+            const initialSelections = {};
+            combo.lines.forEach((line) => {
+                initialSelections[line.id] = {};
+            });
+            setComboSelections(initialSelections);
+            setComboPopup({ product, comboInfo: combo });
+            return;
+        }
+
+        lineIdCounter += 1;
+        const newLine = {
+            lineId: Date.now() + lineIdCounter,
+            product,
+            quantity: 1,
+            discount: { type: 'percent', value: 0 },
+        };
+        syncOrderItems([...orderItems, newLine]);
+    };
+
+    // Combo selection helpers
+    const getComboLineQty = (lineId) => {
+        const sel = comboSelections[lineId] || {};
+        return Object.values(sel).reduce((sum, q) => sum + q, 0);
+    };
+
+    const toggleComboProduct = (lineId, productId, requiredQty) => {
+        setComboSelections((prev) => {
+            const lineSel = { ...(prev[lineId] || {}) };
+            const currentTotal = Object.values(lineSel).reduce((s, q) => s + q, 0);
+            if (lineSel[productId]) {
+                // Remove
+                delete lineSel[productId];
+            } else if (currentTotal < requiredQty) {
+                // Add
+                lineSel[productId] = 1;
+            }
+            return { ...prev, [lineId]: lineSel };
+        });
+    };
+
+    const updateComboProductQty = (lineId, productId, delta, requiredQty) => {
+        setComboSelections((prev) => {
+            const lineSel = { ...(prev[lineId] || {}) };
+            const currentTotal = Object.values(lineSel).reduce((s, q) => s + q, 0);
+            const currentQty = lineSel[productId] || 0;
+            const newQty = currentQty + delta;
+            if (newQty <= 0) {
+                delete lineSel[productId];
+            } else if (currentTotal - currentQty + newQty <= requiredQty) {
+                lineSel[productId] = newQty;
+            }
+            return { ...prev, [lineId]: lineSel };
+        });
+    };
+
+    const isComboComplete = () => {
+        if (!comboPopup) return false;
+        return comboPopup.comboInfo.lines.every((line) => getComboLineQty(line.id) === line.required_qty);
+    };
+
+    const confirmCombo = () => {
+        if (!comboPopup || !isComboComplete()) return;
+        const comboItems = [];
+        comboPopup.comboInfo.lines.forEach((line) => {
+            const lineSel = comboSelections[line.id] || {};
+            Object.entries(lineSel).forEach(([prodId, qty]) => {
+                const product = line.products.find((p) => p.id === parseInt(prodId));
+                if (product && qty > 0) {
+                    comboItems.push({
+                        product,
+                        quantity: qty,
+                        lineLabel: line.name,
+                    });
+                }
+            });
+        });
+        lineIdCounter += 1;
+        const comboLine = {
+            lineId: Date.now() + lineIdCounter,
+            product: comboPopup.product,
+            quantity: 1,
+            discount: { type: 'percent', value: 0 },
+            isCombo: true,
+            comboName: comboPopup.comboInfo.name,
+            comboItems,
+        };
+        syncOrderItems([...orderItems, comboLine]);
+        setComboPopup(null);
+        setComboSelections({});
+    };
+
+    const updateQuantity = (lineId, delta) => {
         const newItems = orderItems
             .map((item) =>
-                item.product.id === productId
-                    ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+                item.lineId === lineId
+                    ? { ...item, quantity: Math.max(0, parseFloat((item.quantity + delta).toFixed(3))) }
                     : item
             )
             .filter((item) => item.quantity > 0);
         syncOrderItems(newItems);
     };
 
-    const removeItem = (productId) => {
-        syncOrderItems(orderItems.filter((item) => item.product.id !== productId));
+    const setQuantity = (lineId, value) => {
+        const qty = parseFloat(value);
+        if (isNaN(qty) || qty <= 0) {
+            syncOrderItems(orderItems.filter((item) => item.lineId !== lineId));
+        } else {
+            const newItems = orderItems.map((item) =>
+                item.lineId === lineId ? { ...item, quantity: qty } : item
+            );
+            syncOrderItems(newItems);
+        }
     };
 
-    const updateItemDiscount = (productId, discountType, discountValue) => {
+    const removeItem = (lineId) => {
+        syncOrderItems(orderItems.filter((item) => item.lineId !== lineId));
+    };
+
+    const updateItemDiscount = (lineId, discountType, discountValue) => {
         const val = Math.max(0, parseFloat(discountValue) || 0);
         const newItems = orderItems.map((item) =>
-            item.product.id === productId
+            item.lineId === lineId
                 ? { ...item, discount: { type: discountType, value: val } }
                 : item
         );
@@ -221,6 +533,14 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                     >
                         🎁 {selectedPromotion ? selectedPromotion.name : 'Khuyến mãi'}
                     </button>
+
+                    {/* Production button */}
+                    <button
+                        className="order-toolbar-btn"
+                        onClick={() => setShowProductionPopup(true)}
+                    >
+                        🏭 Sản xuất
+                    </button>
                 </div>
 
                 <div className="order-header-right">
@@ -266,15 +586,17 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             </div>
                         ) : (
                             filteredProducts.map((product) => {
-                                const inOrder = orderItems.find((i) => i.product.id === product.id);
+                                const totalQty = orderItems
+                                    .filter((i) => i.product.id === product.id)
+                                    .reduce((sum, i) => sum + i.quantity, 0);
                                 return (
                                     <div
                                         key={product.id}
-                                        className={`order-product-card glass-card ${inOrder ? 'order-product-in-cart' : ''}`}
+                                        className={`order-product-card glass-card ${totalQty > 0 ? 'order-product-in-cart' : ''}`}
                                         onClick={() => addToOrder(product)}
                                     >
-                                        {inOrder && <div className="order-product-qty-badge">{inOrder.quantity}</div>}
-                                        <div className="order-product-name">{product.name}</div>
+                                        {totalQty > 0 && <div className="order-product-qty-badge">{totalQty}</div>}
+                                        <div className="order-product-name">{product.display_name || product.name}</div>
                                         <div className="order-product-price">{formatPrice(product.list_price)}</div>
                                         {product.pos_categ_id && (
                                             <div className="order-product-cat">
@@ -294,7 +616,6 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         <h2 className="order-panel-title">Đơn hàng — Bàn {table.number}</h2>
                         <span className="order-panel-count">{orderItems.length} món</span>
                     </div>
-
                     <div className="order-items-list">
                         {orderItems.length === 0 ? (
                             <div className="order-items-empty">
@@ -308,12 +629,15 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                 const hasDiscount = disc.value > 0;
                                 const lineTotal = item.product.list_price * item.quantity;
                                 const itemTotal = getItemTotal(item);
-                                const isEditing = discountItemId === item.product.id;
+                                const isEditing = discountItemId === item.lineId;
 
                                 return (
-                                    <div key={item.product.id} className="order-item fade-in">
+                                    <div key={item.lineId} className={`order-item fade-in ${item.isCombo ? 'order-item-combo' : ''}`}>
                                         <div className="order-item-info">
-                                            <span className="order-item-name">{item.product.name}</span>
+                                            <span className="order-item-name">
+                                                {item.isCombo && <span className="combo-badge">🍱</span>}
+                                                {item.product.display_name || item.product.name}
+                                            </span>
                                             <div className="order-item-prices">
                                                 {hasDiscount && (
                                                     <span className="order-item-price-original">{formatPrice(lineTotal)}</span>
@@ -324,31 +648,55 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                             </div>
                                         </div>
                                         <div className="order-item-controls">
-                                            <button className="order-qty-btn" onClick={() => updateQuantity(item.product.id, -1)}>−</button>
-                                            <span className="order-qty-value">{item.quantity}</span>
-                                            <button className="order-qty-btn" onClick={() => updateQuantity(item.product.id, 1)}>+</button>
+                                            <button className="order-qty-btn" onClick={() => updateQuantity(item.lineId, -1)}>−</button>
+                                            <input
+                                                type="number"
+                                                className="order-qty-input"
+                                                value={item.quantity}
+                                                min="0"
+                                                step="0.1"
+                                                onChange={(e) => setQuantity(item.lineId, e.target.value)}
+                                                onClick={(e) => e.target.select()}
+                                            />
+                                            <button className="order-qty-btn" onClick={() => updateQuantity(item.lineId, 1)}>+</button>
                                             <button
                                                 className={`order-discount-btn ${hasDiscount ? 'order-discount-btn-active' : ''}`}
-                                                onClick={() => setDiscountItemId(isEditing ? null : item.product.id)}
+                                                onClick={() => setDiscountItemId(isEditing ? null : item.lineId)}
                                                 title="Chiết khấu"
                                             >
                                                 %
                                             </button>
-                                            <button className="order-remove-btn" onClick={() => removeItem(item.product.id)}>🗑️</button>
+                                            <button className="order-remove-btn" onClick={() => removeItem(item.lineId)}>🗑️</button>
                                         </div>
+
+                                        {/* Combo sub-items */}
+                                        {item.isCombo && item.comboItems && (
+                                            <div className="combo-sub-items">
+                                                {item.comboItems.map((sub, idx) => (
+                                                    <div key={idx} className="combo-sub-item">
+                                                        <span className="combo-sub-dot">└</span>
+                                                        <span className="combo-sub-name">{sub.product.display_name || sub.product.name}</span>
+                                                        <span className="combo-sub-qty">×{sub.quantity}</span>
+                                                        {sub.product.list_price > 0 && (
+                                                            <span className="combo-sub-extra">+{formatPrice(sub.product.list_price)}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {isEditing && (
                                             <div className="order-item-discount-editor">
                                                 <div className="discount-type-toggle">
                                                     <button
                                                         className={`discount-type-btn ${disc.type === 'percent' ? 'discount-type-active' : ''}`}
-                                                        onClick={() => updateItemDiscount(item.product.id, 'percent', disc.value)}
+                                                        onClick={() => updateItemDiscount(item.lineId, 'percent', disc.value)}
                                                     >
                                                         %
                                                     </button>
                                                     <button
                                                         className={`discount-type-btn ${disc.type === 'amount' ? 'discount-type-active' : ''}`}
-                                                        onClick={() => updateItemDiscount(item.product.id, 'amount', disc.value)}
+                                                        onClick={() => updateItemDiscount(item.lineId, 'amount', disc.value)}
                                                     >
                                                         đ
                                                     </button>
@@ -360,7 +708,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                                     placeholder={disc.type === 'percent' ? '0%' : '0đ'}
                                                     min="0"
                                                     max={disc.type === 'percent' ? 100 : lineTotal}
-                                                    onChange={(e) => updateItemDiscount(item.product.id, disc.type, e.target.value)}
+                                                    onChange={(e) => updateItemDiscount(item.lineId, disc.type, e.target.value)}
                                                 />
                                                 {hasDiscount && (
                                                     <span className="discount-preview">-{formatPrice(getItemDiscountAmount(item))}</span>
@@ -459,7 +807,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
             {/* ===== POPUP: Customer selector ===== */}
             <PopupOverlay show={showCustomerPopup} onClose={() => setShowCustomerPopup(false)} title="👤 Chọn khách hàng" className="order-popup-wide">
-                <div className="popup-search">
+                <div className="popup-search popup-search-with-btn">
                     <input
                         type="text"
                         className="input-field"
@@ -468,6 +816,12 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         onChange={(e) => setCustomerSearch(e.target.value)}
                         autoFocus
                     />
+                    <button
+                        className="btn btn-primary popup-search-btn"
+                        onClick={() => { setShowCreateCustomer(true); setCreateCustomerError(''); }}
+                    >
+                        ➕ Tạo mới
+                    </button>
                 </div>
                 <div className="popup-list">
                     <div
@@ -502,6 +856,72 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                     {filteredCustomers.length === 0 && (
                         <div className="popup-list-empty">Không tìm thấy khách hàng</div>
                     )}
+                </div>
+            </PopupOverlay>
+
+            {/* ===== POPUP: Create new customer ===== */}
+            <PopupOverlay show={showCreateCustomer} onClose={() => setShowCreateCustomer(false)} title="➕ Tạo khách hàng mới">
+                <div className="create-customer-form">
+                    <div className="create-customer-field">
+                        <label className="create-customer-label">Tên khách hàng *</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="Nhập tên khách hàng..."
+                            value={newCustomerForm.name}
+                            onChange={(e) => setNewCustomerForm({ ...newCustomerForm, name: e.target.value })}
+                            autoFocus
+                        />
+                    </div>
+                    <div className="create-customer-field">
+                        <label className="create-customer-label">Số điện thoại</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="Nhập SĐT..."
+                            value={newCustomerForm.phone}
+                            onChange={(e) => setNewCustomerForm({ ...newCustomerForm, phone: e.target.value })}
+                        />
+                    </div>
+                    <div className="create-customer-field">
+                        <label className="create-customer-label">Email</label>
+                        <input
+                            type="email"
+                            className="input-field"
+                            placeholder="Nhập email..."
+                            value={newCustomerForm.email}
+                            onChange={(e) => setNewCustomerForm({ ...newCustomerForm, email: e.target.value })}
+                        />
+                    </div>
+                    <div className="create-customer-field">
+                        <label className="create-customer-label">Địa chỉ</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="Nhập địa chỉ..."
+                            value={newCustomerForm.street}
+                            onChange={(e) => setNewCustomerForm({ ...newCustomerForm, street: e.target.value })}
+                        />
+                    </div>
+                    {createCustomerError && (
+                        <p className="create-customer-error">⚠️ {createCustomerError}</p>
+                    )}
+                    <div className="create-customer-actions">
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleCreateCustomer}
+                            disabled={creatingCustomer}
+                        >
+                            {creatingCustomer ? '⏳ Đang tạo...' : '✅ Tạo khách hàng'}
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => setShowCreateCustomer(false)}
+                            disabled={creatingCustomer}
+                        >
+                            Hủy
+                        </button>
+                    </div>
                 </div>
             </PopupOverlay>
 
@@ -567,6 +987,183 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                     )}
                 </div>
             </PopupOverlay>
+
+            {/* ===== POPUP: Combo product selector ===== */}
+            {comboPopup && (
+                <div className="popup-overlay" onClick={() => { setComboPopup(null); setComboSelections({}); }}>
+                    <div className="combo-popup glass-card slide-up" onClick={(e) => e.stopPropagation()}>
+                        <div className="combo-header">
+                            <h2 className="combo-title">🍱 {comboPopup.comboInfo.name}</h2>
+                            <button className="history-close" onClick={() => { setComboPopup(null); setComboSelections({}); }}>✕</button>
+                        </div>
+                        <div className="combo-body">
+                            {comboPopup.comboInfo.lines.map((line) => {
+                                const selectedQty = getComboLineQty(line.id);
+                                const isLineDone = selectedQty === line.required_qty;
+                                return (
+                                    <div key={line.id} className={`combo-line ${isLineDone ? 'combo-line-done' : ''}`}>
+                                        <div className="combo-line-header">
+                                            <span className="combo-line-name">{line.name}</span>
+                                            <span className={`combo-line-counter ${isLineDone ? 'combo-line-counter-done' : ''}`}>
+                                                {selectedQty}/{line.required_qty}
+                                            </span>
+                                        </div>
+                                        <div className="combo-products">
+                                            {line.products.map((p) => {
+                                                const qty = (comboSelections[line.id] || {})[p.id] || 0;
+                                                const isSelected = qty > 0;
+                                                return (
+                                                    <div
+                                                        key={p.id}
+                                                        className={`combo-product-item ${isSelected ? 'combo-product-selected' : ''} ${!isSelected && isLineDone ? 'combo-product-disabled' : ''}`}
+                                                        onClick={() => toggleComboProduct(line.id, p.id, line.required_qty)}
+                                                    >
+                                                        <div className="combo-product-info">
+                                                            <span className="combo-product-name">{p.display_name}</span>
+                                                            {p.list_price > 0 && (
+                                                                <span className="combo-product-extra">+{formatPrice(p.list_price)}</span>
+                                                            )}
+                                                        </div>
+                                                        {isSelected && (
+                                                            <div className="combo-product-qty" onClick={(e) => e.stopPropagation()}>
+                                                                <button className="combo-qty-btn" onClick={() => updateComboProductQty(line.id, p.id, -1, line.required_qty)}>−</button>
+                                                                <span className="combo-qty-value">{qty}</span>
+                                                                <button className="combo-qty-btn" onClick={() => updateComboProductQty(line.id, p.id, 1, line.required_qty)}>+</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="combo-footer">
+                            <button
+                                className="btn btn-primary combo-confirm-btn"
+                                disabled={!isComboComplete()}
+                                onClick={confirmCombo}
+                            >
+                                {isComboComplete() ? '✅ Xác nhận combo' : 'Vui lòng chọn đủ sản phẩm'}
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => { setComboPopup(null); setComboSelections({}); }}>
+                                Hủy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== POPUP: Production ===== */}
+            {showProductionPopup && (
+                <div className="popup-overlay" onClick={() => { setShowProductionPopup(false); setSelectedProduction(null); }}>
+                    <div className="production-popup glass-card slide-up" onClick={(e) => e.stopPropagation()}>
+                        <div className="production-header">
+                            <h2 className="production-title">🏭 Sản xuất</h2>
+                            <button className="history-close" onClick={() => { setShowProductionPopup(false); setSelectedProduction(null); }}>✕</button>
+                        </div>
+                        <div className="production-body">
+                            {!selectedProduction ? (
+                                /* Product selection list */
+                                <div className="production-product-list">
+                                    <div className="popup-search">
+                                        <input
+                                            type="text"
+                                            className="input-field"
+                                            placeholder="🔍 Tìm sản phẩm sản xuất..."
+                                            value={productionSearch}
+                                            onChange={(e) => setProductionSearch(e.target.value)}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    {productionData
+                                        .filter((p) => !productionSearch.trim() || p.name.toLowerCase().includes(productionSearch.toLowerCase()))
+                                        .map((prod) => (
+                                            <div
+                                                key={prod.id}
+                                                className="production-product-item"
+                                                onClick={() => openProduction(prod)}
+                                            >
+                                                <span className="production-product-name">{prod.name}</span>
+                                                <span className="production-product-unit">{prod.unit}</span>
+                                                <span className="production-product-materials">{prod.materials.length} nguyên liệu</span>
+                                                <span className="production-product-arrow">›</span>
+                                            </div>
+                                        ))}
+                                </div>
+                            ) : (
+                                /* Material entry form */
+                                <div className="production-form">
+                                    <button className="btn btn-secondary production-back-btn" onClick={() => setSelectedProduction(null)}>
+                                        ← Chọn sản phẩm khác
+                                    </button>
+                                    {/* Finished product */}
+                                    <div className="production-finished">
+                                        <div className="production-finished-info">
+                                            <span className="production-finished-label">Thành phẩm</span>
+                                            <span className="production-finished-name">{selectedProduction.name}</span>
+                                        </div>
+                                        <div className="production-finished-qty">
+                                            <label className="production-qty-label">Số lượng ({selectedProduction.unit})</label>
+                                            <input
+                                                type="number"
+                                                className="input-field production-qty-input"
+                                                value={productionQty}
+                                                min="0.1"
+                                                step="0.1"
+                                                onChange={(e) => setProductionQty(parseFloat(e.target.value) || 0)}
+                                                onClick={(e) => e.target.select()}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Materials list */}
+                                    <h4 className="production-materials-title">🧱 Nguyên liệu</h4>
+                                    <div className="production-materials-list">
+                                        <div className="production-material-header">
+                                            <span className="production-mat-col production-mat-name">Tên nguyên liệu</span>
+                                            <span className="production-mat-col production-mat-unit">Đơn vị</span>
+                                            <span className="production-mat-col production-mat-qty">Số lượng</span>
+                                        </div>
+                                        {selectedProduction.materials.map((mat) => (
+                                            <div key={mat.id} className="production-material-row">
+                                                <span className="production-mat-col production-mat-name">{mat.name}</span>
+                                                <span className="production-mat-col production-mat-unit">{mat.unit}</span>
+                                                <span className="production-mat-col production-mat-qty">
+                                                    <input
+                                                        type="number"
+                                                        className="input-field production-mat-input"
+                                                        value={materialQtys[mat.id] ?? mat.default_qty}
+                                                        min="0"
+                                                        step="0.1"
+                                                        onChange={(e) => updateMaterialQty(mat.id, e.target.value)}
+                                                        onClick={(e) => e.target.select()}
+                                                    />
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        {selectedProduction && (
+                            <div className="production-footer">
+                                <button
+                                    className="btn btn-primary production-confirm-btn"
+                                    onClick={handleProductionConfirm}
+                                    disabled={productionQty <= 0}
+                                >
+                                    ✅ Xác nhận sản xuất
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => { setShowProductionPopup(false); setSelectedProduction(null); }}>
+                                    Hủy
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

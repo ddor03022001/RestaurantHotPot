@@ -140,15 +140,32 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                 const itemTotal = getItemTotal(item);
                                 const hasDiscount = (item.discount?.value || 0) > 0;
                                 return (
-                                    <div key={item.product.id} className="payment-order-item">
+                                    <div key={item.lineId || item.product.id} className={`payment-order-item ${item.isCombo ? 'payment-order-item-combo' : ''}`}>
                                         <div className="payment-order-item-left">
                                             <span className="payment-order-item-qty">{item.quantity}x</span>
                                             <div className="payment-order-item-details">
-                                                <span className="payment-order-item-name">{item.product.name}</span>
+                                                <span className="payment-order-item-name">
+                                                    {item.isCombo && <span className="combo-badge">🍱</span>}
+                                                    {item.product.display_name || item.product.name}
+                                                </span>
                                                 {hasDiscount && (
                                                     <span className="payment-order-item-discount">
                                                         CK: {item.discount.type === 'percent' ? `${item.discount.value}%` : formatPrice(item.discount.value)}
                                                     </span>
+                                                )}
+                                                {item.isCombo && item.comboItems && (
+                                                    <div className="payment-combo-sub-items">
+                                                        {item.comboItems.map((sub, idx) => (
+                                                            <div key={idx} className="payment-combo-sub-item">
+                                                                <span className="combo-sub-dot">└</span>
+                                                                <span className="combo-sub-name">{sub.product.display_name || sub.product.name}</span>
+                                                                <span className="combo-sub-qty">×{sub.quantity}</span>
+                                                                {sub.product.list_price > 0 && (
+                                                                    <span className="combo-sub-extra">+{formatPrice(sub.product.list_price)}</span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

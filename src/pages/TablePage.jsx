@@ -2,10 +2,12 @@ import React, { useState, useCallback } from 'react';
 import TableCard from '../components/TableCard';
 import './TablePage.css';
 
-function TablePage({ authData, posConfig, posData, tables, setTables, onBack, onLogout, onOpenTableOrder }) {
+function TablePage({ authData, posConfig, posData, tables, setTables, onBack, onLogout, onCloseSession, onOpenTableOrder }) {
     const [selectedTables, setSelectedTables] = useState([]);
     const [mode, setMode] = useState('normal'); // normal | merge | split
     const [popup, setPopup] = useState(null); // { type: 'confirm-open', table }
+    const [closingSession, setClosingSession] = useState(false);
+    const [closeSessionError, setCloseSessionError] = useState('');
 
     // Order history state
     const [showHistory, setShowHistory] = useState(false);
@@ -52,7 +54,6 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                     setHistoryError(result.error);
                 }
             } else {
-                // Mock data for browser dev
                 await new Promise((r) => setTimeout(r, 500));
                 setHistoryOrders([
                     { id: 1, name: 'POS/001', pos_reference: 'Order 00001-001-0001', date_order: '2026-02-25 10:30:00', partner_id: [1, 'Nguyễn Văn A'], amount_total: 450000, state: 'paid', lines: [1, 2, 3] },
@@ -78,7 +79,6 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                     setOrderLines(result.lines || []);
                 }
             } else {
-                // Mock data
                 await new Promise((r) => setTimeout(r, 300));
                 setOrderLines([
                     { id: 1, product_id: [1, 'Phở bò'], qty: 2, price_unit: 45000, discount: 0, price_subtotal_incl: 90000 },
@@ -98,6 +98,23 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
         setSelectedOrder(null);
         setHistoryOrders([]);
         setOrderLines([]);
+    };
+
+    // Close POS session
+    const handleConfirmCloseSession = async () => {
+        setClosingSession(true);
+        setCloseSessionError('');
+        try {
+            const result = await onCloseSession();
+            if (!result.success) {
+                setCloseSessionError(result.error || 'Không thể đóng ca');
+                setClosingSession(false);
+            }
+            // If success, App.jsx navigates away so we don't need to reset state
+        } catch (err) {
+            setCloseSessionError(err.message);
+            setClosingSession(false);
+        }
     };
 
     // Show confirmation popup before opening table
@@ -135,7 +152,10 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
     }, [popup, setTables, onOpenTableOrder]);
 
     // Close popup
-    const closePopup = () => setPopup(null);
+    const closePopup = () => {
+        setPopup(null);
+        setCloseSessionError('');
+    };
 
     // Close a table
     const handleCloseTable = useCallback((tableId) => {
@@ -261,6 +281,9 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                 </div>
 
                 <div className="table-header-right">
+                    <button className="btn btn-danger" onClick={() => setPopup({ type: 'confirm-close-session' })}>
+                        🔒 Đóng ca
+                    </button>
                     <button className="btn btn-secondary" onClick={onLogout}>
                         🚪 Đăng xuất
                     </button>
@@ -344,6 +367,35 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                 </div>
             )}
 
+            {/* Popup: Confirm close session */}
+            {popup && popup.type === 'confirm-close-session' && (
+                <div className="popup-overlay" onClick={closePopup}>
+                    <div className="popup-card glass-card slide-up" onClick={(e) => e.stopPropagation()}>
+                        <div className="popup-icon">🔒</div>
+                        <h2 className="popup-title">Đóng ca POS?</h2>
+                        <p className="popup-desc">
+                            Bạn có chắc muốn đóng ca <strong>{posConfig.session?.name || 'phiên POS hiện tại'}</strong>?
+                            Sau khi đóng, bạn sẽ quay về màn hình chọn POS.
+                        </p>
+                        {closeSessionError && (
+                            <p className="popup-error">⚠️ {closeSessionError}</p>
+                        )}
+                        <div className="popup-actions">
+                            <button
+                                className="btn btn-danger popup-btn"
+                                onClick={handleConfirmCloseSession}
+                                disabled={closingSession}
+                            >
+                                {closingSession ? '⏳ Đang đóng ca...' : '🔒 Xác nhận đóng ca'}
+                            </button>
+                            <button className="btn btn-secondary popup-btn" onClick={closePopup} disabled={closingSession}>
+                                Hủy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ===== POPUP: Order History ===== */}
             {showHistory && (
                 <div className="popup-overlay" onClick={closeHistory}>
@@ -373,7 +425,6 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                                     <p>⚠️ {historyError}</p>
                                 </div>
                             ) : !selectedOrder ? (
-                                /* ===== Order list ===== */
                                 historyOrders.length === 0 ? (
                                     <div className="history-empty">
                                         <p>📭 Chưa có đơn hàng nào trong 7 ngày qua</p>
@@ -407,7 +458,6 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                                     </div>
                                 )
                             ) : (
-                                /* ===== Order detail ===== */
                                 <div className="history-detail">
                                     <div className="history-detail-info">
                                         <div className="history-detail-row">

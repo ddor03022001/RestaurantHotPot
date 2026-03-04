@@ -56,6 +56,26 @@ function App() {
         setScreen('tables');
     };
 
+    const handleCloseSession = async () => {
+        if (!posConfig?.session?.id) return { success: false, error: 'Không có phiên POS' };
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.closePosSession(posConfig.session.id);
+                if (result.success) {
+                    handleBackToPos();
+                }
+                return result;
+            } else {
+                // Browser dev mock
+                await new Promise((r) => setTimeout(r, 500));
+                handleBackToPos();
+                return { success: true };
+            }
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    };
+
     // Table operations — lifted to App so state persists
     const updateTable = useCallback((tableId, updates) => {
         setTables((prev) =>
@@ -162,6 +182,7 @@ function App() {
                 setTables={updateTables}
                 onBack={handleBackToPos}
                 onLogout={handleLogout}
+                onCloseSession={handleCloseSession}
                 onOpenTableOrder={handleOpenTableOrder}
             />
         );

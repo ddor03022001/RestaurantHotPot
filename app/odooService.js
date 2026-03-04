@@ -107,13 +107,28 @@ class OdooService {
     }
 
     /**
+     * Close a POS session
+     */
+    static async closePosSession(url, db, uid, password, sessionId) {
+        try {
+            await OdooService._execute(
+                url, db, uid, password,
+                'pos.session', 'action_pos_session_closing_control', [[sessionId]], {}
+            );
+            return true;
+        } catch (e) {
+            throw new Error(`Không thể đóng ca: ${e.message}`);
+        }
+    }
+
+    /**
      * Get all products (product.product with sale_ok = true)
      */
     static getProducts(url, db, uid, password) {
         return OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'list_price', 'pos_categ_id', 'image_small', 'barcode', 'default_code', 'categ_id'],
+                fields: ['id', 'name', 'display_name', 'list_price', 'pos_categ_id', 'image_small', 'barcode', 'default_code', 'categ_id'],
             }
         );
     }
@@ -128,6 +143,25 @@ class OdooService {
                 fields: ['id', 'name', 'phone', 'mobile', 'email', 'street'],
             }
         );
+    }
+
+    /**
+     * Create a new customer (res.partner)
+     */
+    static async createCustomer(url, db, uid, password, data) {
+        const vals = { customer: true };
+        if (data.name) vals.name = data.name;
+        if (data.phone) vals.phone = data.phone;
+        if (data.mobile) vals.mobile = data.mobile;
+        if (data.email) vals.email = data.email;
+        if (data.street) vals.street = data.street;
+
+        const id = await OdooService._execute(url, db, uid, password, 'res.partner', 'create', [vals]);
+        // Read back the created record
+        const records = await OdooService._execute(url, db, uid, password, 'res.partner', 'read', [[id]], {
+            fields: ['id', 'name', 'phone', 'mobile', 'email', 'street'],
+        });
+        return records && records.length > 0 ? records[0] : { id, ...vals };
     }
 
     /**

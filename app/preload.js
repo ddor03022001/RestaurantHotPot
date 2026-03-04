@@ -37,6 +37,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPosOrderLines: (lineIds) =>
         ipcRenderer.invoke('odoo:getPosOrderLines', lineIds),
 
+    // Close POS session
+    closePosSession: (sessionId) =>
+        ipcRenderer.invoke('odoo:closePosSession', sessionId),
+
+    // Create customer
+    createCustomer: (data) =>
+        ipcRenderer.invoke('odoo:createCustomer', data),
+
     // Get user info
     getUserInfo: () =>
         ipcRenderer.invoke('odoo:getUserInfo'),

@@ -46,8 +46,13 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         return Math.min(billDiscount.value, subtotal);
     }, [subtotal, billDiscount]);
 
+    // Loyalty points
+    const usedPoints = table.usedPoints || 0;
+
     // Grand total
-    const orderTotal = Math.max(0, subtotal - billDiscountAmount);
+    const afterDiscount = Math.max(0, subtotal - billDiscountAmount);
+    const pointsDeduction = Math.min(usedPoints, afterDiscount);
+    const orderTotal = Math.max(0, afterDiscount - pointsDeduction);
     const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
     const rawTotal = orderItems.reduce((sum, item) => sum + item.product.list_price * item.quantity, 0);
 
@@ -224,6 +229,14 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                     CK tổng bill ({billDiscount.type === 'percent' ? `${billDiscount.value}%` : formatPrice(billDiscount.value)})
                                 </span>
                                 <span className="payment-total-discount-value">-{formatPrice(billDiscountAmount)}</span>
+                            </div>
+                        )}
+                        {pointsDeduction > 0 && (
+                            <div className="payment-total-row payment-total-row-discount">
+                                <span className="payment-total-label">
+                                    Điểm sử dụng ({usedPoints} điểm)
+                                </span>
+                                <span className="payment-total-discount-value">-{formatPrice(pointsDeduction)}</span>
                             </div>
                         )}
                         <div className="payment-total-row payment-total-final">

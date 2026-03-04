@@ -20,6 +20,7 @@ function PopupOverlay({ show, onClose, title, className, children }) {
 }
 
 function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment }) {
+    console.log(posConfig);
     const { products = [], categories = [], customers = [], pricelists = [], promotions = [] } = posData || {};
     const [orderItems, setOrderItems] = useState(table.orderItems || []);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -481,7 +482,23 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         return Math.min(billDiscount.value, subtotal);
     }, [subtotal, billDiscount]);
 
-    const orderTotal = Math.max(0, subtotal - billDiscountAmount);
+    // Loyalty points
+    const [loyaltyEnabled, setLoyaltyEnabled] = useState(true); // Toggle loyalty on/off
+    const [usedPoints, setUsedPoints] = useState(table.usedPoints || 0);
+    const [showUsePoints, setShowUsePoints] = useState(false);
+
+    // Mock: current loyalty points of selected customer (you'll replace with real data)
+    const customerPoints = selectedCustomer ? 1500 : 0;
+
+    const afterDiscount = Math.max(0, subtotal - billDiscountAmount);
+    const earnedPoints = Math.floor(afterDiscount); // 1đ = 1 point
+    const pointsDeduction = loyaltyEnabled ? Math.min(usedPoints, afterDiscount) : 0; // can't deduct more than total
+    const orderTotal = Math.max(0, afterDiscount - pointsDeduction);
+
+    const syncUsedPoints = (pts) => {
+        setUsedPoints(pts);
+        updateTable(table.id, { usedPoints: pts });
+    };
 
     const formatPrice = useCallback((price) => {
         return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
@@ -769,6 +786,51 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             </div>
                         )}
 
+                        {/* Loyalty points section */}
+                        {loyaltyEnabled && selectedCustomer && (
+                            <div className="loyalty-section">
+                                <div className="loyalty-info">
+                                    <div className="loyalty-current">
+                                        <span className="loyalty-label">⭐ Điểm hiện tại</span>
+                                        <span className="loyalty-value">{customerPoints.toLocaleString()} điểm</span>
+                                    </div>
+                                    <div className="loyalty-earned">
+                                        <span className="loyalty-label">📈 Điểm tích lũy</span>
+                                        <span className="loyalty-value loyalty-earned-value">+{earnedPoints.toLocaleString()} điểm</span>
+                                    </div>
+                                </div>
+                                <button
+                                    className={`btn ${usedPoints > 0 ? 'btn-warning' : 'btn-secondary'} loyalty-use-btn`}
+                                    onClick={() => setShowUsePoints(!showUsePoints)}
+                                >
+                                    🎁 Sử dụng điểm {usedPoints > 0 && `(${usedPoints.toLocaleString()} điểm)`}
+                                </button>
+                                {showUsePoints && (
+                                    <div className="loyalty-use-editor">
+                                        <input
+                                            type="number"
+                                            className="input-field loyalty-use-input"
+                                            value={usedPoints || ''}
+                                            placeholder="Nhập số điểm sử dụng..."
+                                            min="0"
+                                            max={customerPoints}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Math.min(customerPoints, parseInt(e.target.value) || 0));
+                                                syncUsedPoints(val);
+                                            }}
+                                            onClick={(e) => e.target.select()}
+                                        />
+                                        <span className="loyalty-use-hint">
+                                            Tối đa: {customerPoints.toLocaleString()} điểm = {formatPrice(customerPoints)}
+                                        </span>
+                                        {usedPoints > 0 && (
+                                            <span className="loyalty-use-deduction">Giảm: -{formatPrice(pointsDeduction)}</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="order-total-section">
                             <div className="order-total-row">
                                 <span className="order-total-label">Tạm tính</span>
@@ -778,6 +840,12 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                 <div className="order-total-row order-total-row-discount">
                                     <span className="order-total-label">Chiết khấu</span>
                                     <span className="order-total-discount">-{formatPrice(billDiscountAmount)}</span>
+                                </div>
+                            )}
+                            {pointsDeduction > 0 && (
+                                <div className="order-total-row order-total-row-discount">
+                                    <span className="order-total-label">Điểm sử dụng ({usedPoints})</span>
+                                    <span className="order-total-discount">-{formatPrice(pointsDeduction)}</span>
                                 </div>
                             )}
                             <div className="order-total">
@@ -797,9 +865,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             >
                                 💳 Thanh toán
                             </button>
-                            <button className="btn btn-secondary order-action-btn" onClick={onBack}>
+                            {/* <button className="btn btn-secondary order-action-btn" onClick={onBack}>
                                 ← Quay lại bàn
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>

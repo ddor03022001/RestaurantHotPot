@@ -38,15 +38,6 @@
     box-shadow: 0 0 25px rgba(245, 158, 11, 0.15);
 }
 
-.table-card-merged {
-    border-color: rgba(139, 92, 246, 0.3);
-    background: rgba(139, 92, 246, 0.05);
-}
-
-.table-card-merged:hover {
-    border-color: rgba(139, 92, 246, 0.5);
-    box-shadow: 0 0 25px rgba(139, 92, 246, 0.15);
-}
 
 /* Table number */
 .table-card-number {
@@ -65,9 +56,6 @@
     color: var(--accent-warning);
 }
 
-.table-card-merged .table-card-number {
-    color: var(--accent-purple);
-}
 
 /* Status icon */
 .table-card-status-icon {
@@ -84,18 +72,6 @@
     color: var(--text-secondary);
 }
 
-/* Merge badge */
-.table-card-merge-badge {
-    margin-top: 8px;
-    padding: 3px 8px;
-    background: rgba(139, 92, 246, 0.2);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 6px;
-    font-size: 10px;
-    font-weight: 600;
-    color: #c4b5fd;
-    white-space: nowrap;
-}
 
 /* Time since open */
 .table-card-time {
@@ -132,44 +108,4 @@
     background: rgba(239, 68, 68, 0.3);
     border-color: rgba(239, 68, 68, 0.5);
     color: white;
-}
-
-/* Selection state */
-.table-card-selected {
-    border-color: var(--accent-secondary) !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.15) !important;
-    background: rgba(59, 130, 246, 0.08) !important;
-    transform: scale(1.03);
-}
-
-.table-card-check {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--accent-secondary);
-    border-radius: 50%;
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    animation: scaleIn 0.2s ease;
-}
-
-/* Dimmed state (not clickable in current mode) */
-.table-card-dimmed {
-    opacity: 0.35;
-    pointer-events: none;
-}
-
-/* Mode indicator */
-.table-card-mode {
-    cursor: pointer;
-}
-
-.table-card-mode:not(.table-card-dimmed):hover {
-    transform: scale(1.05);
 }

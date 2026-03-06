@@ -3,11 +3,19 @@ import TableCard from '../components/TableCard';
 import './TablePage.css';
 
 function TablePage({ authData, posConfig, posData, tables, setTables, onBack, onLogout, onCloseSession, onOpenTableOrder }) {
-    const [selectedTables, setSelectedTables] = useState([]);
-    const [mode, setMode] = useState('normal'); // normal | merge | split
     const [popup, setPopup] = useState(null); // { type: 'confirm-open', table }
     const [closingSession, setClosingSession] = useState(false);
     const [closeSessionError, setCloseSessionError] = useState('');
+
+    // Merge/Split State
+    const [showMergePopup, setShowMergePopup] = useState(false);
+    const [mergeSource, setMergeSource] = useState('');
+    const [mergeDest, setMergeDest] = useState('');
+
+    const [showSplitPopup, setShowSplitPopup] = useState(false);
+    const [splitSource, setSplitSource] = useState('');
+    const [splitDest, setSplitDest] = useState('');
+    const [splitItems, setSplitItems] = useState({}); // { item_index: qty_to_move }
 
     // Order history state
     const [showHistory, setShowHistory] = useState(false);
@@ -175,29 +183,9 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
         );
     }, [setTables]);
 
-    // Toggle table selection for merge/split mode
-    const handleSelectTable = useCallback(
-        (tableId) => {
-            if (mode === 'normal') return;
-            const table = tables.find((t) => t.id === tableId);
-            if (!table) return;
-            if (mode === 'merge' && table.status !== 'occupied') return;
-            if (mode === 'split' && table.mergedTables.length === 0 && !table.mergedWith) return;
-
-            setSelectedTables((prev) =>
-                prev.includes(tableId) ? prev.filter((id) => id !== tableId) : [...prev, tableId]
-            );
-        },
-        [mode, tables]
-    );
-
     // Handle table click
     const handleTableClick = useCallback(
         (tableId) => {
-            if (mode !== 'normal') {
-                handleSelectTable(tableId);
-                return;
-            }
             const table = tables.find((t) => t.id === tableId);
             if (!table) return;
 
@@ -207,47 +195,123 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                 onOpenTableOrder(tableId);
             }
         },
-        [mode, tables, handleSelectTable, showOpenConfirm, onOpenTableOrder]
+        [tables, showOpenConfirm, onOpenTableOrder]
     );
 
-    // Merge/split mode handlers
-    const enterMergeMode = () => { setMode('merge'); setSelectedTables([]); };
-    const enterSplitMode = () => { setMode('split'); setSelectedTables([]); };
-    const cancelMode = () => { setMode('normal'); setSelectedTables([]); };
-
-    const confirmMerge = () => {
-        if (selectedTables.length < 2) return;
-        const primaryId = selectedTables[0];
-        const secondaryIds = selectedTables.slice(1);
-        setTables((prev) =>
-            prev.map((t) => {
-                if (t.id === primaryId) return { ...t, status: 'occupied', mergedTables: [...t.mergedTables, ...secondaryIds] };
-                if (secondaryIds.includes(t.id)) return { ...t, status: 'merged', mergedWith: primaryId };
-                return t;
-            })
-        );
-        setMode('normal');
-        setSelectedTables([]);
+    // Merge/split handlers
+    const openMergePopup = () => {
+        setMergeSource('');
+        setMergeDest('');
+        setShowMergePopup(true);
     };
 
-    const confirmSplit = () => {
-        if (selectedTables.length === 0) return;
-        setTables((prev) =>
-            prev.map((t) => {
-                if (selectedTables.includes(t.id) && t.mergedTables.length > 0) return { ...t, mergedTables: [] };
-                const primaryIds = prev.filter((pt) => selectedTables.includes(pt.id) && pt.mergedTables.length > 0).map((pt) => pt.id);
-                if (primaryIds.includes(t.mergedWith)) return { ...t, status: 'occupied', mergedWith: null };
+    const handleMergeConfirm = () => {
+        if (!mergeSource || !mergeDest || mergeSource === mergeDest) return;
+
+        const sourceId = parseInt(mergeSource, 10);
+        const destId = parseInt(mergeDest, 10);
+
+        setTables(prev => {
+            const sourceTable = prev.find(t => t.id === sourceId);
+            const targetTable = prev.find(t => t.id === destId);
+            if (!sourceTable || !targetTable) return prev;
+
+            const combinedItems = [...(targetTable.orderItems || [])];
+
+            // Combine items logic (add qty if exists, else push)
+            const srcItems = sourceTable.orderItems || [];
+            srcItems.forEach(item => {
+                const existingIdx = combinedItems.findIndex(ti => ti.product.id === item.product.id);
+                if (existingIdx >= 0) {
+                    combinedItems[existingIdx] = {
+                        ...combinedItems[existingIdx],
+                        quantity: combinedItems[existingIdx].quantity + item.quantity
+                    };
+                } else {
+                    combinedItems.push(item);
+                }
+            });
+
+            return prev.map(t => {
+                if (t.id === destId) {
+                    return { ...t, status: 'occupied', orderItems: combinedItems, guestCount: Math.max(t.guestCount || 1, sourceTable.guestCount || 0) };
+                }
+                if (t.id === sourceId) {
+                    return { ...t, status: 'available', orderItems: [], guestCount: 0, orderTime: null };
+                }
                 return t;
-            })
-        );
-        setMode('normal');
-        setSelectedTables([]);
+            });
+        });
+
+        setShowMergePopup(false);
     };
 
-    const getMergeGroupLabel = (table) => {
-        if (table.mergedTables.length > 0) return `Bàn ${table.number} + ${table.mergedTables.join(', ')}`;
-        if (table.mergedWith) return `→ Bàn ${table.mergedWith}`;
-        return null;
+    const openSplitPopup = () => {
+        setSplitSource('');
+        setSplitDest('');
+        setSplitItems({});
+        setShowSplitPopup(true);
+    };
+
+    const handleSplitConfirm = () => {
+        if (!splitSource || !splitDest || splitSource === splitDest) return;
+
+        const sourceId = parseInt(splitSource, 10);
+        const destId = parseInt(splitDest, 10);
+
+        setTables(prev => {
+            const sourceTable = prev.find(t => t.id === sourceId);
+            const targetTable = prev.find(t => t.id === destId);
+            if (!sourceTable || !targetTable) return prev;
+
+            let newSourceItems = [...(sourceTable.orderItems || [])];
+            let newTargetItems = [...(targetTable.orderItems || [])];
+
+            Object.entries(splitItems).forEach(([idxStr, qtyToMove]) => {
+                const idx = parseInt(idxStr, 10);
+                if (qtyToMove > 0 && newSourceItems[idx]) {
+                    const item = newSourceItems[idx];
+
+                    const existingTargetItemIndex = newTargetItems.findIndex(ti => ti.product.id === item.product.id);
+                    if (existingTargetItemIndex >= 0) {
+                        newTargetItems[existingTargetItemIndex] = {
+                            ...newTargetItems[existingTargetItemIndex],
+                            quantity: newTargetItems[existingTargetItemIndex].quantity + qtyToMove
+                        };
+                    } else {
+                        newTargetItems.push({
+                            product: item.product,
+                            quantity: qtyToMove
+                        });
+                    }
+
+                    newSourceItems[idx] = {
+                        ...item,
+                        quantity: item.quantity - qtyToMove
+                    };
+                }
+            });
+
+            newSourceItems = newSourceItems.filter(item => item.quantity > 0);
+
+            return prev.map(t => {
+                if (t.id === destId) {
+                    return { ...t, status: 'occupied', orderItems: newTargetItems, guestCount: Math.max(t.guestCount || 1, 1), orderTime: t.orderTime || new Date().toISOString() };
+                }
+                if (t.id === sourceId) {
+                    return {
+                        ...t,
+                        orderItems: newSourceItems,
+                        status: newSourceItems.length > 0 ? 'occupied' : 'available',
+                        guestCount: newSourceItems.length > 0 ? t.guestCount : 0,
+                        orderTime: newSourceItems.length > 0 ? t.orderTime : null
+                    };
+                }
+                return t;
+            });
+        });
+
+        setShowSplitPopup(false);
     };
 
     const occupiedCount = tables.filter((t) => t.status === 'occupied' || t.status === 'merged').length;
@@ -258,9 +322,9 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
             {/* Header */}
             <header className="table-header">
                 <div className="table-header-left">
-                    <button className="btn btn-secondary table-back-btn" onClick={onBack}>
+                    {/* <button className="btn btn-secondary table-back-btn" onClick={onBack}>
                         ← Quay lại
-                    </button>
+                    </button> */}
                     <div className="table-header-info">
                         <h1 className="table-header-title">{posConfig.name}</h1>
                         <p className="table-header-meta">
@@ -292,29 +356,9 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
 
             {/* Toolbar */}
             <div className="table-toolbar">
-                {mode === 'normal' ? (
-                    <>
-                        <button className="btn btn-purple" onClick={enterMergeMode}>🔗 Gộp bàn</button>
-                        <button className="btn btn-warning" onClick={enterSplitMode}>✂️ Tách bàn</button>
-                        <button className="btn btn-secondary" onClick={openHistory}>📋 Lịch sử đơn hàng</button>
-                    </>
-                ) : mode === 'merge' ? (
-                    <div className="table-toolbar-mode">
-                        <span className="table-toolbar-label">🔗 Chọn các bàn để gộp ({selectedTables.length} đã chọn)</span>
-                        <div className="table-toolbar-actions">
-                            <button className="btn btn-primary" onClick={confirmMerge} disabled={selectedTables.length < 2}>✅ Xác nhận gộp</button>
-                            <button className="btn btn-secondary" onClick={cancelMode}>Hủy</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="table-toolbar-mode">
-                        <span className="table-toolbar-label">✂️ Chọn bàn đã gộp để tách ({selectedTables.length} đã chọn)</span>
-                        <div className="table-toolbar-actions">
-                            <button className="btn btn-warning" onClick={confirmSplit} disabled={selectedTables.length === 0}>✅ Xác nhận tách</button>
-                            <button className="btn btn-secondary" onClick={cancelMode}>Hủy</button>
-                        </div>
-                    </div>
-                )}
+                <button className="btn btn-purple" onClick={openMergePopup}>🔗 Gộp bàn</button>
+                <button className="btn btn-warning" onClick={openSplitPopup}>✂️ Tách bàn</button>
+                <button className="btn btn-secondary" onClick={openHistory}>📋 Lịch sử đơn hàng</button>
             </div>
 
             {/* Table Grid */}
@@ -325,9 +369,6 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                             key={table.id}
                             table={table}
                             index={index}
-                            isSelected={selectedTables.includes(table.id)}
-                            mode={mode}
-                            mergeLabel={getMergeGroupLabel(table)}
                             onClick={() => handleTableClick(table.id)}
                             onClose={() => handleCloseTable(table.id)}
                         />
@@ -598,6 +639,166 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                                     )}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Merge Popup */}
+            {showMergePopup && (
+                <div className="popup-overlay" onClick={() => setShowMergePopup(false)}>
+                    <div className="popup-card slide-up" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <div className="popup-header">
+                            <h3 className="popup-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '24px' }}>🔗</span> Gộp Bàn
+                            </h3>
+                            {/* <button className="popup-close-btn" onClick={() => setShowMergePopup(false)}>✕</button> */}
+                        </div>
+                        <div className="popup-body" style={{ textAlign: 'left', marginTop: '16px' }}>
+                            <div className="popup-form-group">
+                                <label className="popup-label">Từ bàn (đang có khách):</label>
+                                <select
+                                    className="popup-select"
+                                    value={mergeSource}
+                                    onChange={(e) => setMergeSource(e.target.value)}
+                                >
+                                    <option value="">-- Chọn bàn đi --</option>
+                                    {tables.filter(t => t.status === 'occupied').map(t => (
+                                        <option key={t.id} value={t.id}>Bàn {t.number}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="popup-form-group">
+                                <label className="popup-label">Đến bàn:</label>
+                                <select
+                                    className="popup-select"
+                                    value={mergeDest}
+                                    onChange={(e) => setMergeDest(e.target.value)}
+                                    disabled={!mergeSource}
+                                >
+                                    <option value="">-- Chọn bàn đến --</option>
+                                    {tables.filter(t => t.id.toString() !== mergeSource && t.status === 'occupied').map(t => (
+                                        <option key={t.id} value={t.id}>Bàn {t.number}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="popup-footer" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowMergePopup(false)}>Hủy</button>
+                            <button className="btn btn-primary" onClick={handleMergeConfirm} disabled={!mergeSource || !mergeDest || mergeSource === mergeDest}>
+                                Xác nhận Gộp
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Split Popup */}
+            {showSplitPopup && (
+                <div className="popup-overlay" onClick={() => setShowSplitPopup(false)}>
+                    <div className="popup-card slide-up" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '90vw' }}>
+                        <div className="popup-header">
+                            <h3 className="popup-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '24px' }}>✂️</span> Tách Bàn
+                            </h3>
+                            {/* <button className="popup-close-btn" onClick={() => setShowSplitPopup(false)}>✕</button> */}
+                        </div>
+                        <div className="popup-body" style={{ textAlign: 'left', marginTop: '16px' }}>
+                            <div className="popup-split-container">
+                                <div className="popup-form-group" style={{ marginBottom: 0 }}>
+                                    <label className="popup-label">Từ bàn (đang có khách):</label>
+                                    <select
+                                        className="popup-select"
+                                        value={splitSource}
+                                        onChange={(e) => {
+                                            setSplitSource(e.target.value);
+                                            setSplitItems({});
+                                        }}
+                                    >
+                                        <option value="">-- Chọn bàn gốc --</option>
+                                        {tables.filter(t => t.status === 'occupied').map(t => (
+                                            <option key={t.id} value={t.id}>Bàn {t.number}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="popup-form-group" style={{ marginBottom: 0 }}>
+                                    <label className="popup-label">Đến bàn (chỉ bàn trống):</label>
+                                    <select
+                                        className="popup-select"
+                                        value={splitDest}
+                                        onChange={(e) => setSplitDest(e.target.value)}
+                                        disabled={!splitSource}
+                                    >
+                                        <option value="">-- Chọn bàn đích --</option>
+                                        {tables.filter(t => t.status === 'available').map(t => (
+                                            <option key={t.id} value={t.id}>Bàn {t.number}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {splitSource && (
+                                <div>
+                                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Chọn số lượng món muốn chuyển:</h4>
+                                    <div className="split-items-list">
+                                        {(() => {
+                                            const srcId = parseInt(splitSource, 10);
+                                            const srcTbl = tables.find(t => t.id === srcId);
+                                            const items = srcTbl?.orderItems || [];
+
+                                            if (items.length === 0) {
+                                                return (
+                                                    <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                                        <div style={{ fontSize: '24px', marginBottom: '8px' }}>🍽️</div>
+                                                        Bàn này chưa có món nào.
+                                                    </div>
+                                                );
+                                            }
+
+                                            return items.map((item, idx) => (
+                                                <div key={idx} className="split-item-row">
+                                                    <div style={{ flex: 1, paddingRight: '16px' }}>
+                                                        <div className="split-item-name">{item.product.display_name || item.product.name}</div>
+                                                        <div className="split-item-meta">Hiện có: <strong style={{ color: 'var(--text-primary)' }}>{item.quantity}</strong> món</div>
+                                                    </div>
+                                                    <div className="qty-control">
+                                                        <button
+                                                            className="qty-control-btn"
+                                                            disabled={(splitItems[idx] || 0) <= 0}
+                                                            onClick={() => setSplitItems(prev => ({ ...prev, [idx]: Math.max(0, (prev[idx] || 0) - 1) }))}
+                                                        >−</button>
+                                                        <input
+                                                            type="number"
+                                                            className="qty-control-input"
+                                                            min="0"
+                                                            max={item.quantity}
+                                                            value={splitItems[idx] || 0}
+                                                            onChange={(e) => {
+                                                                const val = Math.min(item.quantity, Math.max(0, parseInt(e.target.value) || 0));
+                                                                setSplitItems(prev => ({ ...prev, [idx]: val }));
+                                                            }}
+                                                        />
+                                                        <button
+                                                            className="qty-control-btn"
+                                                            disabled={(splitItems[idx] || 0) >= item.quantity}
+                                                            onClick={() => setSplitItems(prev => ({ ...prev, [idx]: Math.min(item.quantity, (prev[idx] || 0) + 1) }))}
+                                                        >+</button>
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="popup-footer" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowSplitPopup(false)}>Hủy</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSplitConfirm}
+                                disabled={!splitSource || !splitDest || Object.values(splitItems).every(v => v === 0)}
+                            >
+                                Xác nhận Chuyển
+                            </button>
                         </div>
                     </div>
                 </div>

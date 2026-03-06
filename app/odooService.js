@@ -46,7 +46,7 @@ class OdooService {
      */
     static async getPosConfigs(url, db, uid, password) {
         const configs = await OdooService._execute(url, db, uid, password, 'pos.config', 'search_read', [[]], {
-            fields: ['id', 'name', 'stock_location_id', 'pricelist_id', 'company_id', 'current_session_id', 'current_session_state'],
+            fields: ['id', 'name', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id', 'current_session_id', 'current_session_state', 'journal_ids'],
         });
 
         // For each config, check if there's an open session and who owns it
@@ -128,21 +128,49 @@ class OdooService {
         return OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'display_name', 'list_price', 'pos_categ_id', 'image_small', 'barcode', 'default_code', 'categ_id'],
+                fields: ['id', 'name', 'display_name', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id'],
             }
+        );
+    }
+
+    /**
+     * Get payment journals by IDs (from pos.config journal_ids)
+     */
+    static getPaymentJournals(url, db, uid, password, journalIds) {
+        if (!journalIds || !Array.isArray(journalIds) || journalIds.length === 0) return Promise.resolve([]);
+        // Filter to only valid numeric IDs
+        const validIds = journalIds.filter(id => typeof id === 'number' && id > 0);
+        if (validIds.length === 0) return Promise.resolve([]);
+        return OdooService._execute(url, db, uid, password, 'account.journal', 'search_read',
+            [[['id', 'in', validIds]]],
+            { fields: ['id', 'name', 'type', 'code'] }
         );
     }
 
     /**
      * Get all customers (res.partner with customer = true)
      */
-    static getCustomers(url, db, uid, password) {
-        return OdooService._execute(url, db, uid, password, 'res.partner', 'search_read',
+    static async getCustomers(url, db, uid, password) {
+        let customers;
+        customers = await OdooService._execute(url, db, uid, password, 'res.partner', 'search_read',
             [[['customer', '=', true]]],
             {
-                fields: ['id', 'name', 'phone', 'mobile', 'email', 'street'],
+                fields: ['id', 'name', 'phone', 'mobile', 'email', 'street', 'group_ids'],
             }
         );
+        const groups = await OdooService._execute(url, db, uid, password, 'res.partner.group', 'search_read',
+            [[]],
+            { fields: ['id', 'name', 'pricelist_id'] }
+        );
+        for (const pl of customers) {
+            if (pl.group_ids && pl.group_ids.length > 0) {
+                const group = groups.find(g => g.id === pl.group_ids[0]);
+                if (group) {
+                    pl.group_id = group;
+                }
+            }
+        }
+        return customers;
     }
 
     /**
@@ -174,12 +202,53 @@ class OdooService {
     }
 
     /**
-     * Get pricelists
+     * Get pricelists by IDs (from pos.config available_pricelist_ids)
+     * Also fetches pricelist items (product.pricelist.item) for each pricelist
      */
-    static getPricelists(url, db, uid, password) {
-        return OdooService._execute(url, db, uid, password, 'product.pricelist', 'search_read', [[]], {
-            fields: ['id', 'name', 'currency_id', 'active'],
-        });
+    static async getPricelists(url, db, uid, password, pricelistIds) {
+        let pricelists;
+        if (!pricelistIds || !Array.isArray(pricelistIds) || pricelistIds.length === 0) {
+            pricelists = await OdooService._execute(url, db, uid, password, 'product.pricelist', 'search_read', [[]], {
+                fields: ['id', 'name', 'currency_id', 'active', 'item_ids'],
+            });
+        } else {
+            const validIds = pricelistIds.filter(id => typeof id === 'number' && id > 0);
+            if (validIds.length === 0) return [];
+            pricelists = await OdooService._execute(url, db, uid, password, 'product.pricelist', 'search_read',
+                [[['id', 'in', validIds]]],
+                { fields: ['id', 'name', 'currency_id', 'active', 'item_ids'] }
+            );
+        }
+
+        // Collect all item IDs from all pricelists
+        const allItemIds = [];
+        for (const pl of pricelists) {
+            if (pl.item_ids && pl.item_ids.length > 0) {
+                allItemIds.push(...pl.item_ids);
+            }
+        }
+
+        // Batch fetch pricelist items
+        let itemsMap = {};
+        if (allItemIds.length > 0) {
+            const items = await OdooService._execute(url, db, uid, password, 'product.pricelist.item', 'search_read',
+                [[['id', 'in', allItemIds]]],
+                { fields: ['id', 'pricelist_id', 'compute_price', 'min_quantity'] }
+            );
+            for (const item of items) {
+                const plId = item.pricelist_id ? item.pricelist_id[0] : null;
+                if (plId) {
+                    if (!itemsMap[plId]) itemsMap[plId] = [];
+                    itemsMap[plId].push(item);
+                }
+            }
+        }
+
+        // Attach items to pricelists
+        for (const pl of pricelists) {
+            pl.items = itemsMap[pl.id] || [];
+        }
+        return pricelists;
     }
 
     /**

@@ -269,13 +269,14 @@
     display: flex;
     flex-direction: column;
     background: rgba(15, 23, 42, 0.4);
+    overflow-y: auto;
 }
 
 /* Payment methods */
 .payment-methods {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
 }
 
 .payment-method-card {
@@ -283,8 +284,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 20px 12px;
+    gap: 4px;
+    padding: 12px 8px;
     cursor: pointer;
     transition: all var(--transition-fast);
     text-align: center;
@@ -435,4 +436,269 @@
     margin-top: 24px;
     padding: 16px 40px;
     font-size: 16px;
+}
+
+/* Payment actions row */
+.payment-actions-row {
+    display: flex;
+    gap: 8px;
+}
+
+.payment-print-btn {
+    flex-shrink: 0;
+    padding: 14px 16px;
+    font-size: 13px;
+}
+
+.payment-pay-btn {
+    flex: 1;
+}
+
+/* Payment Lines */
+.payment-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-glass);
+}
+
+.payment-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.payment-line-active {
+    border-color: var(--accent-primary);
+    background: rgba(16, 185, 129, 0.06);
+}
+
+.payment-line-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.payment-line-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.payment-line-amount {
+    width: 110px;
+    padding: 6px 8px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-sm);
+    color: var(--accent-warning);
+    outline: none;
+}
+
+.payment-line-amount:focus {
+    border-color: var(--accent-primary);
+}
+
+.payment-line-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+}
+
+.payment-line-remove:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.payment-lines-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.payment-lines-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.payment-lines-paid {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.payment-lines-remaining {
+    font-weight: 700;
+    color: var(--accent-warning);
+}
+
+.payment-lines-change {
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+/* Print Bill Popup */
+.print-bill-popup {
+    width: 380px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.print-bill-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.95);
+}
+
+.print-bill-actions .btn {
+    flex: 1;
+}
+
+/* Receipt styles */
+.print-bill-receipt {
+    padding: 20px 24px;
+    color: #000;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.receipt-header {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.receipt-shop-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: #000;
+}
+
+.receipt-sub {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: 2px;
+}
+
+.receipt-info {
+    font-size: 12px;
+    margin: 2px 0;
+    color: #333;
+}
+
+.receipt-divider {
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+    margin: 6px 0;
+    letter-spacing: -0.5px;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.receipt-table th {
+    text-align: left;
+    padding: 4px 0;
+    border-bottom: 1px dashed #999;
+    font-size: 11px;
+}
+
+.receipt-th-qty,
+.receipt-td-center {
+    text-align: center;
+    width: 40px;
+}
+
+.receipt-th-price,
+.receipt-td-right {
+    text-align: right;
+    width: 80px;
+}
+
+.receipt-table td {
+    padding: 3px 0;
+    vertical-align: top;
+}
+
+.receipt-totals {
+    margin-top: 4px;
+}
+
+.receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 2px 0;
+}
+
+.receipt-grand-total {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.receipt-footer {
+    text-align: center;
+    font-size: 11px;
+    margin: 2px 0;
+    color: #666;
+}
+
+/* Print styles */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .print-bill-receipt,
+    .print-bill-receipt * {
+        visibility: visible !important;
+    }
+
+    .print-bill-receipt {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        padding: 5mm;
+        background: #fff !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
 }

@@ -24,11 +24,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('odoo:getPosCategories'),
 
     // Pricelists & Promotions
-    getPricelists: () =>
-        ipcRenderer.invoke('odoo:getPricelists'),
+    getPricelists: (pricelistIds) =>
+        ipcRenderer.invoke('odoo:getPricelists', pricelistIds),
 
     getPromotions: () =>
         ipcRenderer.invoke('odoo:getPromotions'),
+
+    // Payment journals
+    getPaymentJournals: (journalIds) =>
+        ipcRenderer.invoke('odoo:getPaymentJournals', journalIds),
 
     // POS order history
     getPosOrders: (configId, days) =>

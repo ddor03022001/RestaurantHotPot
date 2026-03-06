@@ -20,8 +20,7 @@ function PopupOverlay({ show, onClose, title, className, children }) {
 }
 
 function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment }) {
-    console.log(posConfig);
-    const { products = [], categories = [], customers = [], pricelists = [], promotions = [] } = posData || {};
+    const { products = [], categories = [], customers = [], pricelists = [], promotions = [], defaultPricelistId = null } = posData || {};
     const [orderItems, setOrderItems] = useState(table.orderItems || []);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -201,8 +200,10 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     // Item discount popup
     const [discountItemId, setDiscountItemId] = useState(null);
 
-    // Customer selection (moved from PaymentScreen)
-    const [selectedCustomer, setSelectedCustomer] = useState(table.selectedCustomer || null);
+    // Customer selection — closed table → no customer; open table → keep saved
+    const hasOrders = table.orderItems && table.orderItems.length > 0;
+    const initialCustomer = hasOrders ? (table.selectedCustomer || null) : null;
+    const [selectedCustomer, setSelectedCustomer] = useState(initialCustomer);
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerPopup, setShowCustomerPopup] = useState(false);
 
@@ -214,7 +215,18 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [localCustomers, setLocalCustomers] = useState(customers);
 
     // Pricelist & Promotion selection
-    const [selectedPricelist, setSelectedPricelist] = useState(table.selectedPricelist || null);
+    // Closed table → set default pricelist and save to table; Open table → keep saved
+    const getInitialPricelist = () => {
+        if (hasOrders && table.selectedPricelist) return table.selectedPricelist;
+        // Closed table: find default and save it
+        if (defaultPricelistId && pricelists.length > 0) {
+            const defaultPl = pricelists.find(pl => pl.id === defaultPricelistId) || null;
+            if (defaultPl) updateTable(table.id, { selectedPricelist: defaultPl });
+            return defaultPl;
+        }
+        return null;
+    };
+    const [selectedPricelist, setSelectedPricelist] = useState(getInitialPricelist);
     const [showPricelistPopup, setShowPricelistPopup] = useState(false);
     const [selectedPromotion, setSelectedPromotion] = useState(table.selectedPromotion || null);
     const [showPromotionPopup, setShowPromotionPopup] = useState(false);
@@ -226,6 +238,16 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         updateTable(table.id, { orderItems: newItems, billDiscount: bd });
     };
 
+    // Get product price based on selected pricelist
+    // Mock: default pricelist = half price; others = full price
+    // TODO: replace with real pricelist logic
+    const getProductPrice = (product) => {
+        if (selectedPricelist && selectedPricelist.id === defaultPricelistId) {
+            return product.list_price / 2;
+        }
+        return product.list_price;
+    };
+
     const syncBillDiscount = (newBillDiscount) => {
         setBillDiscount(newBillDiscount);
         updateTable(table.id, { billDiscount: newBillDiscount });
@@ -234,6 +256,12 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const syncCustomer = (customer) => {
         setSelectedCustomer(customer);
         updateTable(table.id, { selectedCustomer: customer });
+        if (customer.group_id) {
+            const pl = pricelists.find(g => g.id === customer.group_id.pricelist_id[0]);
+            if (pl) {
+                syncPricelist(pl);
+            }
+        }
     };
 
     const syncPricelist = (pl) => {
@@ -458,7 +486,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     };
 
     const getItemTotal = (item) => {
-        const lineTotal = item.product.list_price * item.quantity;
+        const lineTotal = getProductPrice(item.product) * item.quantity;
         const disc = item.discount || { type: 'percent', value: 0 };
         if (disc.value <= 0) return lineTotal;
         if (disc.type === 'percent') {
@@ -468,7 +496,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     };
 
     const getItemDiscountAmount = (item) => {
-        const lineTotal = item.product.list_price * item.quantity;
+        const lineTotal = getProductPrice(item.product) * item.quantity;
         return lineTotal - getItemTotal(item);
     };
 
@@ -614,7 +642,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                     >
                                         {totalQty > 0 && <div className="order-product-qty-badge">{totalQty}</div>}
                                         <div className="order-product-name">{product.display_name || product.name}</div>
-                                        <div className="order-product-price">{formatPrice(product.list_price)}</div>
+                                        <div className="order-product-price">{formatPrice(getProductPrice(product))}</div>
                                         {product.pos_categ_id && (
                                             <div className="order-product-cat">
                                                 {Array.isArray(product.pos_categ_id) ? product.pos_categ_id[1] : ''}
@@ -644,7 +672,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             orderItems.map((item) => {
                                 const disc = item.discount || { type: 'percent', value: 0 };
                                 const hasDiscount = disc.value > 0;
-                                const lineTotal = item.product.list_price * item.quantity;
+                                const lineTotal = getProductPrice(item.product) * item.quantity;
                                 const itemTotal = getItemTotal(item);
                                 const isEditing = discountItemId === item.lineId;
 

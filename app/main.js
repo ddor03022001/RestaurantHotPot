@@ -118,11 +118,11 @@ ipcMain.handle('odoo:getUserInfo', async () => {
     return { success: true, user: odooSession.user };
 });
 
-ipcMain.handle('odoo:getPricelists', async () => {
+ipcMain.handle('odoo:getPricelists', async (event, pricelistIds) => {
     if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
     try {
         const { url, db, uid, password } = odooSession;
-        const pricelists = await OdooService.getPricelists(url, db, uid, password);
+        const pricelists = await OdooService.getPricelists(url, db, uid, password, pricelistIds);
         return { success: true, pricelists };
     } catch (error) {
         return { success: false, error: error.message };
@@ -135,6 +135,17 @@ ipcMain.handle('odoo:getPromotions', async () => {
         const { url, db, uid, password } = odooSession;
         const promotions = await OdooService.getPromotions(url, db, uid, password);
         return { success: true, promotions };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('odoo:getPaymentJournals', async (event, journalIds) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const journals = await OdooService.getPaymentJournals(url, db, uid, password, journalIds);
+        return { success: true, journals };
     } catch (error) {
         return { success: false, error: error.message };
     }

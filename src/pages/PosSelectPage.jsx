@@ -75,21 +75,23 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
 
             // Load products, customers, categories, pricelists, promotions
             setLoadingMessage('Đang tải sản phẩm...');
-            let products = [], customers = [], categories = [], pricelists = [], promotions = [];
+            let products = [], customers = [], categories = [], pricelists = [], promotions = [], paymentJournals = [];
 
             if (window.electronAPI) {
-                const [prodResult, custResult, catResult, plResult, promoResult] = await Promise.all([
+                const [prodResult, custResult, catResult, plResult, promoResult, journalResult] = await Promise.all([
                     window.electronAPI.getProducts(),
                     window.electronAPI.getCustomers(),
                     window.electronAPI.getPosCategories(),
-                    window.electronAPI.getPricelists(),
+                    window.electronAPI.getPricelists(config.available_pricelist_ids || []),
                     window.electronAPI.getPromotions(),
+                    window.electronAPI.getPaymentJournals(config.journal_ids || []),
                 ]);
                 products = prodResult.success ? prodResult.products : [];
                 customers = custResult.success ? custResult.customers : [];
                 categories = catResult.success ? catResult.categories : [];
                 pricelists = plResult.success ? plResult.pricelists : [];
                 promotions = promoResult.success ? promoResult.promotions : [];
+                paymentJournals = journalResult.success ? journalResult.journals : [];
             } else {
                 // Browser mock data
                 await new Promise((r) => setTimeout(r, 600));
@@ -128,12 +130,17 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                     { id: 2, name: 'Giảm 50k cho bill trên 500k', discount_type: 'fixed_amount', discount_fixed_amount: 50000, active: true },
                     { id: 3, name: 'Mua 2 tặng 1 đồ uống', discount_type: 'percentage', discount_percentage: 100, active: true },
                 ];
+                paymentJournals = [
+                    { id: 1, name: 'Tiền mặt', type: 'cash', code: 'CSH' },
+                    { id: 2, name: 'Ngân hàng', type: 'bank', code: 'BNK' },
+                    { id: 3, name: 'Chuyển khoản', type: 'bank', code: 'TRF' },
+                ];
             }
 
             setLoadingMessage('');
             onSelectPos(
                 { ...config, session },
-                { products, customers, categories, pricelists, promotions }
+                { products, customers, categories, pricelists, promotions, paymentJournals, defaultPricelistId: config.pricelist_id ? config.pricelist_id[0] : null }
             );
         } catch (err) {
             setError(err.message);

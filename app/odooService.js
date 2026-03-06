@@ -46,7 +46,7 @@ class OdooService {
      */
     static async getPosConfigs(url, db, uid, password) {
         const configs = await OdooService._execute(url, db, uid, password, 'pos.config', 'search_read', [[]], {
-            fields: ['id', 'name', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id', 'current_session_id', 'current_session_state', 'journal_ids'],
+            fields: ['id', 'name', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id', 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp'],
         });
 
         // For each config, check if there's an open session and who owns it
@@ -123,14 +123,54 @@ class OdooService {
 
     /**
      * Get all products (product.product with sale_ok = true)
+     * Also fetches MRP components for products with is_pos_mrp = true
      */
-    static getProducts(url, db, uid, password) {
-        return OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
+    static async getProducts(url, db, uid, password) {
+        const products = await OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'display_name', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id'],
+                fields: ['id', 'name', 'display_name', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids'],
             }
         );
+
+        // Collect all MRP item IDs from products with is_pos_mrp
+        const allMrpIds = [];
+        for (const p of products) {
+            if (p.is_pos_mrp && p.product_mrp_ids && p.product_mrp_ids.length > 0) {
+                allMrpIds.push(...p.product_mrp_ids);
+            }
+        }
+
+        // Batch fetch pos.product.mrp records
+        let mrpMap = {};
+        if (allMrpIds.length > 0) {
+            const mrpItems = await OdooService._execute(url, db, uid, password, 'pos.product.mrp', 'search_read',
+                [[['id', 'in', allMrpIds]]],
+                { fields: ['id', 'component'] }
+            );
+            for (const item of mrpItems) {
+                mrpMap[item.id] = item;
+            }
+        }
+
+        // Attach MRP components to products
+        for (const p of products) {
+            if (p.is_pos_mrp && p.product_mrp_ids && p.product_mrp_ids.length > 0) {
+                p.mrpComponents = p.product_mrp_ids
+                    .map(id => mrpMap[id])
+                    .filter(Boolean)
+                    .map(item => ({
+                        id: item.id,
+                        componentId: item.component ? item.component[0] : null,
+                        componentName: item.component ? item.component[1] : 'Unknown',
+                        quantity: 0,
+                    }));
+            } else {
+                p.mrpComponents = [];
+            }
+        }
+
+        return products;
     }
 
     /**
@@ -233,7 +273,7 @@ class OdooService {
         if (allItemIds.length > 0) {
             const items = await OdooService._execute(url, db, uid, password, 'product.pricelist.item', 'search_read',
                 [[['id', 'in', allItemIds]]],
-                { fields: ['id', 'pricelist_id', 'compute_price', 'min_quantity'] }
+                { fields: ['id', 'pricelist_id', 'compute_price', 'min_quantity', 'product_tmpl_id', 'product_id', 'categ_id', 'pos_category', 'date_start', 'date_end', 'fixed_price', 'percent_price'] }
             );
             for (const item of items) {
                 const plId = item.pricelist_id ? item.pricelist_id[0] : null;

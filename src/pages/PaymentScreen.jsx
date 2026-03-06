@@ -17,14 +17,55 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const selectedPricelist = table.selectedPricelist || null;
     const defaultPricelistId = (posData && posData.defaultPricelistId) || null;
 
-    // Get product price based on selected pricelist (same logic as OrderScreen)
-    // Mock: default pricelist = half price; others = full price
-    // TODO: replace with real pricelist logic
+    // Get product price based on selected pricelist (Odoo logic — same as OrderScreen)
     const getProductPrice = (product) => {
-        if (selectedPricelist && selectedPricelist.id === defaultPricelistId) {
-            return product.list_price / 2;
+        if (!selectedPricelist || !selectedPricelist.items || selectedPricelist.items.length === 0) {
+            return product.list_price;
         }
-        return product.list_price;
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const productTmplId = Array.isArray(product.product_tmpl_id) ? product.product_tmpl_id[0] : product.product_tmpl_id;
+        const posCategoryIds = [];
+        if (product.pos_categ_id) {
+            posCategoryIds.push(Array.isArray(product.pos_categ_id) ? product.pos_categ_id[0] : product.pos_categ_id);
+        }
+
+        const matchingItems = selectedPricelist.items.filter(item => {
+            if (item.product_tmpl_id && item.product_tmpl_id[0] !== productTmplId && !item.pos_category) return false;
+            if (item.product_id && item.product_id[0] !== product.id) return false;
+            if (item.categ_id && product.categ_id) {
+                const prodCategId = Array.isArray(product.categ_id) ? product.categ_id[0] : product.categ_id;
+                if (item.categ_id[0] !== prodCategId) return false;
+            }
+            if (item.pos_category && posCategoryIds.indexOf(item.pos_category[0]) === -1) return false;
+            if (item.date_start) {
+                const start = new Date(item.date_start);
+                start.setHours(0, 0, 0, 0);
+                if (start > now) return false;
+            }
+            if (item.date_end) {
+                const end = new Date(item.date_end);
+                end.setHours(0, 0, 0, 0);
+                if (end < now) return false;
+            }
+            return true;
+        });
+
+        if (matchingItems.length === 0) return product.list_price;
+
+        let price = product.list_price;
+        for (const rule of matchingItems) {
+            if (rule.compute_price === 'fixed') {
+                price = rule.fixed_price || 0;
+                break;
+            } else if (rule.compute_price === 'percentage') {
+                price = price - (price * ((rule.percent_price || 0) / 100));
+                break;
+            }
+        }
+        return price;
     };
 
     // Multi payment lines: [{ journalId, journalName, amount }]

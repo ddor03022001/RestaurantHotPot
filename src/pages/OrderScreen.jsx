@@ -109,55 +109,10 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [comboPopup, setComboPopup] = useState(null); // { productId, comboInfo }
     const [comboSelections, setComboSelections] = useState({}); // { lineId: { productId: qty } }
 
-    // Mock production data
-    const productionData = [
-        {
-            id: 1,
-            name: 'Nước ép cam',
-            unit: 'ly',
-            materials: [
-                { id: 101, name: 'Cam tươi', unit: 'kg', default_qty: 0.3 },
-                { id: 102, name: 'Đường', unit: 'g', default_qty: 20 },
-                { id: 103, name: 'Đá viên', unit: 'viên', default_qty: 5 },
-            ],
-        },
-        {
-            id: 2,
-            name: 'Sinh tố bơ',
-            unit: 'ly',
-            materials: [
-                { id: 201, name: 'Bơ', unit: 'quả', default_qty: 0.5 },
-                { id: 202, name: 'Sữa đặc', unit: 'ml', default_qty: 30 },
-                { id: 203, name: 'Đá viên', unit: 'viên', default_qty: 5 },
-                { id: 204, name: 'Sữa tươi', unit: 'ml', default_qty: 100 },
-            ],
-        },
-        {
-            id: 3,
-            name: 'Nước lẩu Thái',
-            unit: 'phần',
-            materials: [
-                { id: 301, name: 'Nước dùng xương', unit: 'lít', default_qty: 1.5 },
-                { id: 302, name: 'Sả cây', unit: 'cây', default_qty: 2 },
-                { id: 303, name: 'Lá chanh', unit: 'lá', default_qty: 5 },
-                { id: 304, name: 'Ớt hiểm', unit: 'g', default_qty: 10 },
-                { id: 305, name: 'Nước mắm', unit: 'ml', default_qty: 30 },
-                { id: 306, name: 'Nước cốt chanh', unit: 'ml', default_qty: 20 },
-            ],
-        },
-        {
-            id: 4,
-            name: 'Gỏi cuốn',
-            unit: 'cuốn',
-            materials: [
-                { id: 401, name: 'Bánh tráng', unit: 'tấm', default_qty: 1 },
-                { id: 402, name: 'Bún', unit: 'g', default_qty: 30 },
-                { id: 403, name: 'Tôm luộc', unit: 'con', default_qty: 2 },
-                { id: 404, name: 'Rau sống', unit: 'g', default_qty: 20 },
-                { id: 405, name: 'Giá đỗ', unit: 'g', default_qty: 10 },
-            ],
-        },
-    ];
+    // Production data — filter products with is_pos_mrp
+    const productionData = useMemo(() => {
+        return products.filter(p => p.is_pos_mrp && p.mrpComponents && p.mrpComponents.length > 0);
+    }, [products]);
 
     // Production popup state
     const [showProductionPopup, setShowProductionPopup] = useState(false);
@@ -170,7 +125,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         setSelectedProduction(prod);
         setProductionQty(1);
         const initialQtys = {};
-        prod.materials.forEach((m) => { initialQtys[m.id] = m.default_qty; });
+        prod.mrpComponents.forEach((m) => { initialQtys[m.id] = m.quantity; });
         setMaterialQtys(initialQtys);
     };
 
@@ -238,14 +193,56 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         updateTable(table.id, { orderItems: newItems, billDiscount: bd });
     };
 
-    // Get product price based on selected pricelist
-    // Mock: default pricelist = half price; others = full price
-    // TODO: replace with real pricelist logic
+    // Get product price based on selected pricelist (Odoo logic)
     const getProductPrice = (product) => {
-        if (selectedPricelist && selectedPricelist.id === defaultPricelistId) {
-            return product.list_price / 2;
+        if (!selectedPricelist || !selectedPricelist.items || selectedPricelist.items.length === 0) {
+            return product.list_price;
         }
-        return product.list_price;
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const productTmplId = Array.isArray(product.product_tmpl_id) ? product.product_tmpl_id[0] : product.product_tmpl_id;
+        const posCategoryIds = [];
+        if (product.pos_categ_id) {
+            posCategoryIds.push(Array.isArray(product.pos_categ_id) ? product.pos_categ_id[0] : product.pos_categ_id);
+        }
+
+        // Filter matching pricelist items
+        const matchingItems = selectedPricelist.items.filter(item => {
+            if (item.product_tmpl_id && item.product_tmpl_id[0] !== productTmplId && !item.pos_category) return false;
+            if (item.product_id && item.product_id[0] !== product.id) return false;
+            if (item.categ_id && product.categ_id) {
+                const prodCategId = Array.isArray(product.categ_id) ? product.categ_id[0] : product.categ_id;
+                if (item.categ_id[0] !== prodCategId) return false;
+            }
+            if (item.pos_category && posCategoryIds.indexOf(item.pos_category[0]) === -1) return false;
+            if (item.date_start) {
+                const start = new Date(item.date_start);
+                start.setHours(0, 0, 0, 0);
+                if (start > now) return false;
+            }
+            if (item.date_end) {
+                const end = new Date(item.date_end);
+                end.setHours(0, 0, 0, 0);
+                if (end < now) return false;
+            }
+            return true;
+        });
+
+        if (matchingItems.length === 0) return product.list_price;
+
+        let price = product.list_price;
+        for (const rule of matchingItems) {
+            if (rule.compute_price === 'fixed') {
+                price = rule.fixed_price || 0;
+                break;
+            } else if (rule.compute_price === 'percentage') {
+                price = price - (price * ((rule.percent_price || 0) / 100));
+                break;
+            }
+        }
+        return price;
     };
 
     const syncBillDiscount = (newBillDiscount) => {
@@ -579,13 +576,15 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         🎁 {selectedPromotion ? selectedPromotion.name : 'Khuyến mãi'}
                     </button>
 
-                    {/* Production button */}
-                    <button
-                        className="order-toolbar-btn"
-                        onClick={() => setShowProductionPopup(true)}
-                    >
-                        🏭 Sản xuất
-                    </button>
+                    {/* Production button — only show if pos_mrp enabled */}
+                    {posConfig?.pos_mrp && (
+                        <button
+                            className="order-toolbar-btn"
+                            onClick={() => setShowProductionPopup(true)}
+                        >
+                            🏭 Sản xuất
+                        </button>
+                    )}
                 </div>
 
                 <div className="order-header-right">
@@ -1174,19 +1173,21 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                         />
                                     </div>
                                     {productionData
-                                        .filter((p) => !productionSearch.trim() || p.name.toLowerCase().includes(productionSearch.toLowerCase()))
+                                        .filter((p) => !productionSearch.trim() || (p.display_name || p.name).toLowerCase().includes(productionSearch.toLowerCase()))
                                         .map((prod) => (
                                             <div
                                                 key={prod.id}
                                                 className="production-product-item"
                                                 onClick={() => openProduction(prod)}
                                             >
-                                                <span className="production-product-name">{prod.name}</span>
-                                                <span className="production-product-unit">{prod.unit}</span>
-                                                <span className="production-product-materials">{prod.materials.length} nguyên liệu</span>
+                                                <span className="production-product-name">{prod.display_name || prod.name}</span>
+                                                <span className="production-product-materials">{prod.mrpComponents.length} nguyên liệu</span>
                                                 <span className="production-product-arrow">›</span>
                                             </div>
                                         ))}
+                                    {productionData.length === 0 && (
+                                        <p style={{ color: 'var(--text-muted)', padding: '16px', textAlign: 'center' }}>Không có sản phẩm sản xuất</p>
+                                    )}
                                 </div>
                             ) : (
                                 /* Material entry form */
@@ -1198,10 +1199,10 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                     <div className="production-finished">
                                         <div className="production-finished-info">
                                             <span className="production-finished-label">Thành phẩm</span>
-                                            <span className="production-finished-name">{selectedProduction.name}</span>
+                                            <span className="production-finished-name">{selectedProduction.display_name || selectedProduction.name}</span>
                                         </div>
                                         <div className="production-finished-qty">
-                                            <label className="production-qty-label">Số lượng ({selectedProduction.unit})</label>
+                                            <label className="production-qty-label">Số lượng</label>
                                             <input
                                                 type="number"
                                                 className="input-field production-qty-input"
@@ -1218,19 +1219,17 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                     <h4 className="production-materials-title">🧱 Nguyên liệu</h4>
                                     <div className="production-materials-list">
                                         <div className="production-material-header">
-                                            <span className="production-mat-col production-mat-name">Tên nguyên liệu</span>
-                                            <span className="production-mat-col production-mat-unit">Đơn vị</span>
+                                            <span className="production-mat-col production-mat-name">Nguyên liệu</span>
                                             <span className="production-mat-col production-mat-qty">Số lượng</span>
                                         </div>
-                                        {selectedProduction.materials.map((mat) => (
+                                        {selectedProduction.mrpComponents.map((mat) => (
                                             <div key={mat.id} className="production-material-row">
-                                                <span className="production-mat-col production-mat-name">{mat.name}</span>
-                                                <span className="production-mat-col production-mat-unit">{mat.unit}</span>
+                                                <span className="production-mat-col production-mat-name">{mat.componentName}</span>
                                                 <span className="production-mat-col production-mat-qty">
                                                     <input
                                                         type="number"
                                                         className="input-field production-mat-input"
-                                                        value={materialQtys[mat.id] ?? mat.default_qty}
+                                                        value={materialQtys[mat.id] ?? mat.quantity}
                                                         min="0"
                                                         step="0.1"
                                                         onChange={(e) => updateMaterialQty(mat.id, e.target.value)}

@@ -25,86 +25,6 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Mock combo data — combo products have combo_lines
-    const comboData = {
-        // Key = product ID that is a combo
-        132712: {
-            name: 'Combo Lẩu Thái 2 Người',
-            lines: [
-                {
-                    id: 1,
-                    name: 'Chọn nước lẩu',
-                    required_qty: 1,
-                    products: [
-                        { id: 101, display_name: 'Nước lẩu Thái chua cay', list_price: 0 },
-                        { id: 102, display_name: 'Nước lẩu Tomyum', list_price: 0 },
-                        { id: 103, display_name: 'Nước lẩu Mala', list_price: 15000 },
-                    ],
-                },
-                {
-                    id: 2,
-                    name: 'Chọn thịt (2 phần)',
-                    required_qty: 2,
-                    products: [
-                        { id: 201, display_name: 'Bò Mỹ thái lát', list_price: 0 },
-                        { id: 202, display_name: 'Ba chỉ bò', list_price: 0 },
-                        { id: 203, display_name: 'Thịt heo cuộn nấm', list_price: 0 },
-                        { id: 204, display_name: 'Bò Wagyu A5', list_price: 50000 },
-                    ],
-                },
-                {
-                    id: 3,
-                    name: 'Chọn rau & nấm (3 phần)',
-                    required_qty: 3,
-                    products: [
-                        { id: 301, display_name: 'Rau muống', list_price: 0 },
-                        { id: 302, display_name: 'Nấm kim châm', list_price: 0 },
-                        { id: 303, display_name: 'Nấm đùi gà', list_price: 0 },
-                        { id: 304, display_name: 'Đậu phụ non', list_price: 0 },
-                        { id: 305, display_name: 'Bắp cải thảo', list_price: 0 },
-                    ],
-                },
-                {
-                    id: 4,
-                    name: 'Chọn đồ uống',
-                    required_qty: 2,
-                    products: [
-                        { id: 401, display_name: 'Trà đá', list_price: 0 },
-                        { id: 402, display_name: 'Nước ngọt Pepsi', list_price: 0 },
-                        { id: 403, display_name: 'Bia Tiger', list_price: 10000 },
-                        { id: 404, display_name: 'Sinh tố bơ', list_price: 15000 },
-                    ],
-                },
-            ],
-        },
-        999002: {
-            name: 'Combo Trái Cây Mùa Hè',
-            lines: [
-                {
-                    id: 1,
-                    name: 'Chọn trái cây chính (2 loại)',
-                    required_qty: 2,
-                    products: [
-                        { id: 501, display_name: 'Xoài cát Hòa Lộc', list_price: 0 },
-                        { id: 502, display_name: 'Sầu riêng Ri6', list_price: 30000 },
-                        { id: 503, display_name: 'Măng cụt', list_price: 0 },
-                        { id: 504, display_name: 'Chôm chôm', list_price: 0 },
-                    ],
-                },
-                {
-                    id: 2,
-                    name: 'Chọn topping',
-                    required_qty: 1,
-                    products: [
-                        { id: 601, display_name: 'Sữa đặc', list_price: 0 },
-                        { id: 602, display_name: 'Kem vanilla', list_price: 5000 },
-                        { id: 603, display_name: 'Mật ong', list_price: 0 },
-                    ],
-                },
-            ],
-        },
-    };
-
     // Combo popup state
     const [comboPopup, setComboPopup] = useState(null); // { productId, comboInfo }
     const [comboSelections, setComboSelections] = useState({}); // { lineId: { productId: qty } }
@@ -351,15 +271,22 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     // Add product to order — always creates a new line
     const addToOrder = (product) => {
         // Check if product is a combo
-        const combo = comboData[product.id];
-        if (combo) {
-            // Initialize combo selections
+        if (product.is_combo && product.combo_lines && product.combo_lines.length > 0) {
+            const comboInfo = {
+                name: product.display_name || product.name,
+                lines: product.combo_lines
+            };
+            // Initialize combo selections and auto-select if only 1 option
             const initialSelections = {};
-            combo.lines.forEach((line) => {
+            comboInfo.lines.forEach((line) => {
                 initialSelections[line.id] = {};
+                // Auto-select if there is only 1 product option in this line
+                if (line.products && line.products.length === 1) {
+                    initialSelections[line.id][line.products[0].id] = line.required_qty;
+                }
             });
             setComboSelections(initialSelections);
-            setComboPopup({ product, comboInfo: combo });
+            setComboPopup({ product, comboInfo });
             return;
         }
 
@@ -379,7 +306,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         return Object.values(sel).reduce((sum, q) => sum + q, 0);
     };
 
-    const toggleComboProduct = (lineId, productId, requiredQty) => {
+    const toggleComboProduct = (lineId, productId, requiredQty, totalLineOptions) => {
         setComboSelections((prev) => {
             const lineSel = { ...(prev[lineId] || {}) };
             const currentTotal = Object.values(lineSel).reduce((s, q) => s + q, 0);
@@ -388,7 +315,12 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 delete lineSel[productId];
             } else if (currentTotal < requiredQty) {
                 // Add
-                lineSel[productId] = 1;
+                // If there's only 1 option in this line, auto-fill the required quantity
+                if (totalLineOptions === 1) {
+                    lineSel[productId] = requiredQty;
+                } else {
+                    lineSel[productId] = 1;
+                }
             }
             return { ...prev, [lineId]: lineSel };
         });
@@ -721,8 +653,8 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                                         <span className="combo-sub-dot">└</span>
                                                         <span className="combo-sub-name">{sub.product.display_name || sub.product.name}</span>
                                                         <span className="combo-sub-qty">×{sub.quantity}</span>
-                                                        {sub.product.list_price > 0 && (
-                                                            <span className="combo-sub-extra">+{formatPrice(sub.product.list_price)}</span>
+                                                        {getProductPrice(sub.product) > 0 && (
+                                                            <span className="combo-sub-extra">+{formatPrice(getProductPrice(sub.product))}</span>
                                                         )}
                                                     </div>
                                                 ))}
@@ -1111,12 +1043,12 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                                     <div
                                                         key={p.id}
                                                         className={`combo-product-item ${isSelected ? 'combo-product-selected' : ''} ${!isSelected && isLineDone ? 'combo-product-disabled' : ''}`}
-                                                        onClick={() => toggleComboProduct(line.id, p.id, line.required_qty)}
+                                                        onClick={() => toggleComboProduct(line.id, p.id, line.required_qty, line.products.length)}
                                                     >
                                                         <div className="combo-product-info">
                                                             <span className="combo-product-name">{p.display_name}</span>
-                                                            {p.list_price > 0 && (
-                                                                <span className="combo-product-extra">+{formatPrice(p.list_price)}</span>
+                                                            {getProductPrice(p) > 0 && (
+                                                                <span className="combo-product-extra">+{formatPrice(getProductPrice(p))}</span>
                                                             )}
                                                         </div>
                                                         {isSelected && (

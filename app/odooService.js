@@ -170,6 +170,54 @@ class OdooService {
             }
         }
 
+        // Collect all Combo item IDs
+        const allComboIds = [];
+        for (const p of products) {
+            if (p.is_combo && p.pos_combo_item_ids && p.pos_combo_item_ids.length > 0) {
+                allComboIds.push(...p.pos_combo_item_ids);
+            }
+        }
+
+        // Batch fetch pos.combo.item records
+        let comboMap = {};
+        if (allComboIds.length > 0) {
+            const comboItems = await OdooService._execute(url, db, uid, password, 'pos.combo.item', 'search_read',
+                [[['id', 'in', allComboIds]]],
+                { fields: ['id', 'name', 'product_ids', 'quantity'] }
+            );
+            for (const item of comboItems) {
+                comboMap[item.id] = item;
+            }
+        }
+
+        const productsMap = {};
+        for (const p of products) {
+            productsMap[p.id] = p;
+        }
+
+        // Attach combo lines to products
+        for (const p of products) {
+            if (p.is_combo && p.pos_combo_item_ids && p.pos_combo_item_ids.length > 0) {
+                p.combo_lines = p.pos_combo_item_ids
+                    .map(id => comboMap[id])
+                    .filter(Boolean)
+                    .map(item => {
+                        const selectableProducts = (item.product_ids || [])
+                            .map(prodId => productsMap[prodId])
+                            .filter(Boolean);
+
+                        return {
+                            id: item.id,
+                            name: item.name || 'Tùy chọn',
+                            required_qty: item.quantity || 1,
+                            products: selectableProducts,
+                        };
+                    });
+            } else {
+                p.combo_lines = [];
+            }
+        }
+
         return products;
     }
 

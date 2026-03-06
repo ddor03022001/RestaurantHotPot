@@ -53,6 +53,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createProductionOrder: (productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId) =>
         ipcRenderer.invoke('odoo:createProductionOrder', productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId),
 
+    // Create POS order
+    createPosOrder: (orderData) =>
+        ipcRenderer.invoke('odoo:createPosOrder', orderData),
+
+    // Execute arbitrary XML-RPC Call
+    executeKw: (model, method, args, kwargs) =>
+        ipcRenderer.invoke('odoo:executeKw', model, method, args, kwargs),
+
     // Get user info
     getUserInfo: () =>
         ipcRenderer.invoke('odoo:getUserInfo'),

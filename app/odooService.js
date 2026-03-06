@@ -63,6 +63,25 @@ class OdooService {
     }
 
     /**
+     * Create a new POS Order (pos.order -> create_from_ui)
+     */
+    static async createPosOrder(url, db, uid, password, orderData) {
+        try {
+            const result = await OdooService._execute(url, db, uid, password, 'pos.order', 'create_from_ui', [[orderData]]);
+            console.log("Create POS Order result:", result);
+            return result;
+        } catch (error) {
+            console.error("Create POS Order error:", error);
+            // Ignore _thread.lock serialization error similar to pos.mrp if happens
+            if (error.message && error.message.includes('_thread.lock')) {
+                console.warn("Ignored XML-RPC serialization error on successful POS Order creation.");
+                return true;
+            }
+            throw error;
+        }
+    }
+
+    /**
      * Get user info from Odoo
      */
     static getUserInfo(url, db, uid, password) {

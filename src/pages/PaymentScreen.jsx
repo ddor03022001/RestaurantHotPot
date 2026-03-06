@@ -173,28 +173,100 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
     };
 
+    const [showPayConfirm, setShowPayConfirm] = useState(false);
+
     // Handle payment
-    const handlePayment = async () => {
-        console.log('=== PAYMENT DATA ===', {
-            table,
-            orderItems,
-            selectedCustomer,
-            paymentLines,
-            subtotal,
-            totalItemDiscounts,
-            billDiscount,
-            billDiscountAmount,
-            usedPoints: localUsedPoints,
-            pointsDeduction,
-            orderTotal,
-            totalPaid,
-            changeAmount,
-            selectedPricelist
-        });
+    const handlePaymentClick = () => {
+        setShowPayConfirm(true);
+    };
+
+    const handleConfirmPayment = async () => {
+        setShowPayConfirm(false);
         setProcessing(true);
-        await new Promise((r) => setTimeout(r, 1500));
-        setProcessing(false);
-        setCompleted(true);
+        try {
+            // Find statement_ids for chosen payment journals under the current open session
+            const statementIds = [];
+            for (const pl of paymentLines) {
+                const stResp = await window.electronAPI.executeKw(
+                    'account.bank.statement', 'search_read',
+                    [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', pl.journalId]]],
+                    { fields: ['id'], limit: 1 }
+                );
+
+                let statementId = false;
+                if (stResp.success && stResp.result && stResp.result.length > 0) {
+                    statementId = stResp.result[0].id;
+                }
+
+                statementIds.push([0, 0, {
+                    journal_id: pl.journalId,
+                    amount: pl.amount,
+                    name: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    statement_id: statementId
+                }]);
+            }
+
+            // Calculate the discount distribution ratio for global discounts
+            const ratio = subtotal > 0 ? orderTotal / subtotal : 1;
+
+            const lines = orderItems.map(item => {
+                const price = getProductPrice(item.product);
+                // What they would pay for this line specifically due to item-level discount:
+                const itemOriginalTotalForThisLine = getItemTotal(item);
+                // Final amount this line contributes, factoring in bill discounts and points:
+                const itemFinalTotal = itemOriginalTotalForThisLine * ratio;
+
+                const rawTotal = price * item.quantity;
+                const effectiveDiscountPct = rawTotal > 0 ? ((rawTotal - itemFinalTotal) / rawTotal) * 100 : 0;
+
+                return [0, 0, {
+                    product_id: item.product.id,
+                    qty: item.quantity,
+                    price_unit: price,
+                    discount: effectiveDiscountPct,
+                    tax_ids: [[6, false, item.product.taxes_id || []]]
+                }];
+            });
+
+            // Local time formatted for Odoo
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 19).replace('T', ' ');
+
+            const uidId = Math.random().toString(36).substr(2, 9);
+
+            const orderData = {
+                data: {
+                    name: `Order ${uidId}`,
+                    amount_paid: totalPaid,
+                    amount_return: changeAmount,
+                    amount_tax: 0, // Simplified, modify if tax calculation is needed locally
+                    amount_total: orderTotal,
+                    creation_date: localISOTime,
+                    fiscal_position_id: false,
+                    lines: lines,
+                    partner_id: selectedCustomer ? selectedCustomer.id : false,
+                    pos_session_id: posConfig.session.id,
+                    sequence_number: 1, // Optional placeholder
+                    statement_ids: statementIds,
+                    uid: uidId,
+                    user_id: authData.user.id
+                },
+                id: uidId,
+                to_invoice: false
+            };
+
+            const res = await window.electronAPI.createPosOrder(orderData);
+            if (!res.success) {
+                throw new Error(res.error);
+            }
+
+            setCompleted(true);
+        } catch (err) {
+            console.error("Lỗi thanh toán:", err);
+            alert("Lỗi thanh toán: " + err.message);
+        } finally {
+            setProcessing(false);
+        }
     };
 
     const handleDone = () => {
@@ -229,6 +301,32 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
     return (
         <div className="payment-screen">
+            {/* Payment Confirmation Popup */}
+            {showPayConfirm && (
+                <div className="popup-overlay" onClick={() => setShowPayConfirm(false)}>
+                    <div className="popup-card slide-up" onClick={e => e.stopPropagation()}>
+                        <div className="popup-header">
+                            <h3 className="popup-title">🤔 Xác nhận thanh toán</h3>
+                            <button className="popup-close-btn" onClick={() => setShowPayConfirm(false)}>✕</button>
+                        </div>
+                        <div className="popup-body">
+                            <p style={{ textAlign: 'center', fontSize: '1.1rem', marginBottom: '20px' }}>
+                                Bạn đã chắc chắn chưa? <br />
+                                <strong style={{ color: 'var(--danger-color)' }}>Dữ liệu sẽ được tạo thành Pos Order!</strong>
+                            </p>
+                        </div>
+                        <div className="popup-footer">
+                            <button className="btn btn-secondary" onClick={() => setShowPayConfirm(false)}>
+                                Xem lại
+                            </button>
+                            <button className="btn btn-primary" onClick={handleConfirmPayment}>
+                                Xác nhận {formatPrice(orderTotal)}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <header className="payment-header">
                 <div className="payment-header-left">
@@ -503,7 +601,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             </button>
                             <button
                                 className="btn btn-primary payment-pay-btn"
-                                onClick={handlePayment}
+                                onClick={handlePaymentClick}
                                 disabled={processing || orderItems.length === 0 || totalPaid < orderTotal}
                             >
                                 {processing ? (

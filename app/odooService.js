@@ -33,6 +33,36 @@ class OdooService {
     }
 
     /**
+     * Create a production order via pos.mrp -> create_from_ui
+     */
+    static async createProductionOrder(url, db, uid, password, productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId) {
+        try {
+            const result = await OdooService._execute(url, db, uid, password, 'pos.mrp', 'create_from_ui', [{
+                'type': 'mrp',
+                'product_id': productId,
+                'quantity': quantity,
+                'user_id': uid,
+                'pos_branch_id': branchId,
+                'pos_session_id': sessionId,
+                'raw_material_ids': materialIds,
+                'location_id': locationId,
+                'location_dest_id': locationDestId,
+                'mrp_picking_type_id': pickingTypeId
+            }]);
+            console.log(result);
+            return result;
+        } catch (error) {
+            // Odoo's pos.mrp create_from_ui returns a RecordSet which XML-RPC cannot serialize,
+            // throwing a TypeError about '_thread.lock' even though the order is created successfully.
+            if (error.message && error.message.includes('_thread.lock')) {
+                console.warn("Ignored XML-RPC serialization error on successful MRP creation.");
+                return true;
+            }
+            throw error;
+        }
+    }
+
+    /**
      * Get user info from Odoo
      */
     static getUserInfo(url, db, uid, password) {
@@ -46,7 +76,11 @@ class OdooService {
      */
     static async getPosConfigs(url, db, uid, password) {
         const configs = await OdooService._execute(url, db, uid, password, 'pos.config', 'search_read', [[]], {
-            fields: ['id', 'name', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id', 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp'],
+            fields: [
+                'id', 'name', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id',
+                'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
+                'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point'
+            ],
         });
 
         // For each config, check if there's an open session and who owns it
@@ -243,7 +277,7 @@ class OdooService {
         customers = await OdooService._execute(url, db, uid, password, 'res.partner', 'search_read',
             [[['customer', '=', true]]],
             {
-                fields: ['id', 'name', 'phone', 'mobile', 'email', 'street', 'group_ids'],
+                fields: ['id', 'name', 'phone', 'mobile', 'email', 'street', 'group_ids', 'pos_loyalty_point'],
             }
         );
         const groups = await OdooService._execute(url, db, uid, password, 'res.partner.group', 'search_read',

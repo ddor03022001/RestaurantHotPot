@@ -33,19 +33,23 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const productionData = useMemo(() => {
         return products.filter(p => p.is_pos_mrp && p.mrpComponents && p.mrpComponents.length > 0);
     }, [products]);
-
     // Production popup state
     const [showProductionPopup, setShowProductionPopup] = useState(false);
     const [selectedProduction, setSelectedProduction] = useState(null);
-    const [productionQty, setProductionQty] = useState(1);
+    const [productionQty, setProductionQty] = useState(0);
     const [materialQtys, setMaterialQtys] = useState({});
     const [productionSearch, setProductionSearch] = useState('');
+    const [isProducing, setIsProducing] = useState(false);
+    const [productionError, setProductionError] = useState('');
+    const [showProduceConfirm, setShowProduceConfirm] = useState(false);
 
     const openProduction = (prod) => {
         setSelectedProduction(prod);
-        setProductionQty(1);
+        setProductionQty(0);
+        setProductionError('');
+        setShowProduceConfirm(false);
         const initialQtys = {};
-        prod.mrpComponents.forEach((m) => { initialQtys[m.id] = m.quantity; });
+        prod.mrpComponents.forEach((m) => { initialQtys[m.componentId] = m.quantity; });
         setMaterialQtys(initialQtys);
     };
 
@@ -57,15 +61,54 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         }));
     };
 
-    const handleProductionConfirm = () => {
-        // Placeholder — user will implement real logic
-        console.log('Production confirm:', {
-            product: selectedProduction,
-            finishedQty: productionQty,
-            materials: materialQtys,
-        });
-        setShowProductionPopup(false);
-        setSelectedProduction(null);
+    const handleProductionConfirm = async () => {
+        if (!selectedProduction || productionQty <= 0) return;
+
+        setShowProduceConfirm(false);
+        setIsProducing(true);
+        setProductionError('');
+
+        try {
+            // Build raw_material_ids expected by Odoo
+            // const materialIds = selectedProduction.mrpComponents.map(m => {
+            //     const qty = materialQtys[m.id] || 0;
+            //     // Structure expected: [0, 0, { product_id: ID, qty: QTY }]
+            //     return [0, 0, {
+            //         product_id: m.componentId,
+            //         qty: qty
+            //     }];
+            // });
+
+            // Fallbacks for config fields if missing
+            const branchId = posConfig.pos_branch_id ? posConfig.pos_branch_id[0] : false;
+            const locationId = posConfig.stock_location_id ? posConfig.stock_location_id[0] : false;
+            const locationDestId = posConfig.location_dest_id ? posConfig.location_dest_id[0] : false;
+            const pickingTypeId = posConfig.mrp_picking_type_id ? posConfig.mrp_picking_type_id[0] : false;
+            const filtered_materialQtys = Object.fromEntries(
+                Object.entries(materialQtys).filter(([key, value]) => value > 0)
+            );
+            const res = await window.electronAPI.createProductionOrder(
+                selectedProduction.id,
+                productionQty,
+                branchId,
+                posConfig.current_session_id[0],
+                filtered_materialQtys,
+                locationId,
+                locationDestId,
+                pickingTypeId
+            );
+
+            if (res.success) {
+                setShowProductionPopup(false);
+                setSelectedProduction(null);
+            } else {
+                setProductionError(res.error || 'Lỗi tạo đơn sản xuất');
+            }
+        } catch (err) {
+            setProductionError(err.message);
+        } finally {
+            setIsProducing(false);
+        }
     };
 
     // Bill discount state
@@ -439,23 +482,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         return Math.min(billDiscount.value, subtotal);
     }, [subtotal, billDiscount]);
 
-    // Loyalty points
-    const [loyaltyEnabled, setLoyaltyEnabled] = useState(true); // Toggle loyalty on/off
-    const [usedPoints, setUsedPoints] = useState(table.usedPoints || 0);
-    const [showUsePoints, setShowUsePoints] = useState(false);
-
-    // Mock: current loyalty points of selected customer (you'll replace with real data)
-    const customerPoints = selectedCustomer ? 1500 : 0;
-
+    // Loyalty points are now handled entirely in PaymentScreen.jsx
     const afterDiscount = Math.max(0, subtotal - billDiscountAmount);
-    const earnedPoints = Math.floor(afterDiscount); // 1đ = 1 point
-    const pointsDeduction = loyaltyEnabled ? Math.min(usedPoints, afterDiscount) : 0; // can't deduct more than total
-    const orderTotal = Math.max(0, afterDiscount - pointsDeduction);
-
-    const syncUsedPoints = (pts) => {
-        setUsedPoints(pts);
-        updateTable(table.id, { usedPoints: pts });
-    };
+    const orderTotal = Math.max(0, afterDiscount);
 
     const formatPrice = useCallback((price) => {
         return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
@@ -745,51 +774,6 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             </div>
                         )}
 
-                        {/* Loyalty points section */}
-                        {loyaltyEnabled && selectedCustomer && (
-                            <div className="loyalty-section">
-                                <div className="loyalty-info">
-                                    <div className="loyalty-current">
-                                        <span className="loyalty-label">⭐ Điểm hiện tại</span>
-                                        <span className="loyalty-value">{customerPoints.toLocaleString()} điểm</span>
-                                    </div>
-                                    <div className="loyalty-earned">
-                                        <span className="loyalty-label">📈 Điểm tích lũy</span>
-                                        <span className="loyalty-value loyalty-earned-value">+{earnedPoints.toLocaleString()} điểm</span>
-                                    </div>
-                                </div>
-                                <button
-                                    className={`btn ${usedPoints > 0 ? 'btn-warning' : 'btn-secondary'} loyalty-use-btn`}
-                                    onClick={() => setShowUsePoints(!showUsePoints)}
-                                >
-                                    🎁 Sử dụng điểm {usedPoints > 0 && `(${usedPoints.toLocaleString()} điểm)`}
-                                </button>
-                                {showUsePoints && (
-                                    <div className="loyalty-use-editor">
-                                        <input
-                                            type="number"
-                                            className="input-field loyalty-use-input"
-                                            value={usedPoints || ''}
-                                            placeholder="Nhập số điểm sử dụng..."
-                                            min="0"
-                                            max={customerPoints}
-                                            onChange={(e) => {
-                                                const val = Math.max(0, Math.min(customerPoints, parseInt(e.target.value) || 0));
-                                                syncUsedPoints(val);
-                                            }}
-                                            onClick={(e) => e.target.select()}
-                                        />
-                                        <span className="loyalty-use-hint">
-                                            Tối đa: {customerPoints.toLocaleString()} điểm = {formatPrice(customerPoints)}
-                                        </span>
-                                        {usedPoints > 0 && (
-                                            <span className="loyalty-use-deduction">Giảm: -{formatPrice(pointsDeduction)}</span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
                         <div className="order-total-section">
                             <div className="order-total-row">
                                 <span className="order-total-label">Tạm tính</span>
@@ -799,12 +783,6 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                 <div className="order-total-row order-total-row-discount">
                                     <span className="order-total-label">Chiết khấu</span>
                                     <span className="order-total-discount">-{formatPrice(billDiscountAmount)}</span>
-                                </div>
-                            )}
-                            {pointsDeduction > 0 && (
-                                <div className="order-total-row order-total-row-discount">
-                                    <span className="order-total-label">Điểm sử dụng ({usedPoints})</span>
-                                    <span className="order-total-discount">-{formatPrice(pointsDeduction)}</span>
                                 </div>
                             )}
                             <div className="order-total">
@@ -1155,16 +1133,16 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                             <span className="production-mat-col production-mat-qty">Số lượng</span>
                                         </div>
                                         {selectedProduction.mrpComponents.map((mat) => (
-                                            <div key={mat.id} className="production-material-row">
+                                            <div key={mat.componentId} className="production-material-row">
                                                 <span className="production-mat-col production-mat-name">{mat.componentName}</span>
                                                 <span className="production-mat-col production-mat-qty">
                                                     <input
                                                         type="number"
                                                         className="input-field production-mat-input"
-                                                        value={materialQtys[mat.id] ?? mat.quantity}
+                                                        value={materialQtys[mat.componentId] ?? mat.quantity}
                                                         min="0"
                                                         step="0.1"
-                                                        onChange={(e) => updateMaterialQty(mat.id, e.target.value)}
+                                                        onChange={(e) => updateMaterialQty(mat.componentId, e.target.value)}
                                                         onClick={(e) => e.target.select()}
                                                     />
                                                 </span>
@@ -1175,19 +1153,48 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             )}
                         </div>
                         {selectedProduction && (
-                            <div className="production-footer">
-                                <button
-                                    className="btn btn-primary production-confirm-btn"
-                                    onClick={handleProductionConfirm}
-                                    disabled={productionQty <= 0}
-                                >
-                                    ✅ Xác nhận sản xuất
-                                </button>
-                                <button className="btn btn-secondary" onClick={() => { setShowProductionPopup(false); setSelectedProduction(null); }}>
-                                    Hủy
-                                </button>
+                            <div className="production-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {productionError && <div style={{ color: 'red', fontSize: '14px', textAlign: 'center' }}>{productionError}</div>}
+                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                    <button
+                                        className="btn btn-primary production-confirm-btn"
+                                        onClick={() => setShowProduceConfirm(true)}
+                                        disabled={productionQty <= 0 || isProducing}
+                                    >
+                                        {isProducing ? '⏳ Đang xử lý...' : '✅ Xác nhận sản xuất'}
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => { setShowProductionPopup(false); setSelectedProduction(null); }}
+                                        disabled={isProducing}
+                                    >
+                                        Hủy
+                                    </button>
+                                </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {/* Custom Production Confirm Popup */}
+            {showProduceConfirm && (
+                <div className="popup-overlay" onClick={() => setShowProduceConfirm(false)} style={{ zIndex: 2000 }}>
+                    <div className="glass-card popup-card" style={{ width: '400px', padding: '24px', borderRadius: '16px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤔</div>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '20px', fontWeight: 'bold' }}>Xác nhận sản xuất</h3>
+                        <p style={{ margin: '0 0 24px 0', color: 'var(--text-muted)', fontSize: '15px', lineHeight: '1.5' }}>
+                            Bạn có chắc chắn muốn tạo đơn sản xuất cho <strong>{productionQty} {selectedProduction?.display_name || selectedProduction?.name}</strong> với định mức vật tư hiện tại không?
+                            <br /><br />
+                            <em>Bạn đã kiểm tra đầy đủ dữ liệu chưa?</em>
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button className="btn btn-secondary" style={{ flex: 1, padding: '12px' }} onClick={() => setShowProduceConfirm(false)}>
+                                Xem lại
+                            </button>
+                            <button className="btn btn-primary" style={{ flex: 1, padding: '12px', background: 'var(--primary-color)' }} onClick={handleProductionConfirm}>
+                                Đồng ý tạo
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

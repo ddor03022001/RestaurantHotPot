@@ -49,6 +49,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createCustomer: (data) =>
         ipcRenderer.invoke('odoo:createCustomer', data),
 
+    // Create production order
+    createProductionOrder: (productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId) =>
+        ipcRenderer.invoke('odoo:createProductionOrder', productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId),
+
     // Get user info
     getUserInfo: () =>
         ipcRenderer.invoke('odoo:getUserInfo'),

@@ -75,6 +75,15 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [completed, setCompleted] = useState(false);
     const [showPrintBill, setShowPrintBill] = useState(false);
 
+    // Note and Ecommerce Code
+    const [note, setNote] = useState(table.note || '');
+    const [showNotePopup, setShowNotePopup] = useState(false);
+    const [tempNote, setTempNote] = useState('');
+
+    const [ecommerceCode, setEcommerceCode] = useState(table.ecommerceCode || '');
+    const [showEcommerceCodePopup, setShowEcommerceCodePopup] = useState(false);
+    const [tempEcommerceCode, setTempEcommerceCode] = useState('');
+
     // Calculate item total after per-item discount
     const getItemTotal = (item) => {
         const lineTotal = getProductPrice(item.product) * item.quantity;
@@ -104,12 +113,26 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         return Math.min(billDiscount.value, subtotal);
     }, [subtotal, billDiscount]);
 
-    // Loyalty points
-    const usedPoints = table.usedPoints || 0;
+    // Loyalty points state (moved from OrderScreen)
+    const [showUsePoints, setShowUsePoints] = useState(false);
+    const loyaltyEnabled = posConfig.enable_button_loyalty_point || false;
+    const customerPoints = selectedCustomer?.pos_loyalty_point || 0;
+    const [localUsedPoints, setLocalUsedPoints] = useState(table.usedPoints || 0);
+
+    const afterDiscountTotal = Math.max(0, subtotal - billDiscountAmount);
+    const earnedPoints = Math.floor(afterDiscountTotal / 100);
+
+    const updateUsedPoints = (val) => {
+        setLocalUsedPoints(val);
+        // Dispatch to table context just in case it needs to be saved
+        window.dispatchEvent(new CustomEvent('update-table-discount', {
+            detail: { tableId: table.id, billDiscount: table.billDiscount, usedPoints: val }
+        }));
+    };
 
     // Grand total
     const afterDiscount = Math.max(0, subtotal - billDiscountAmount);
-    const pointsDeduction = Math.min(usedPoints, afterDiscount);
+    const pointsDeduction = Math.min(localUsedPoints, afterDiscount);
     const orderTotal = Math.max(0, afterDiscount - pointsDeduction);
     const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
     const rawTotal = orderItems.reduce((sum, item) => sum + getProductPrice(item.product) * item.quantity, 0);
@@ -161,7 +184,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             totalItemDiscounts,
             billDiscount,
             billDiscountAmount,
-            usedPoints,
+            usedPoints: localUsedPoints,
             pointsDeduction,
             orderTotal,
             totalPaid,
@@ -365,6 +388,57 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
                     {/* Total + Pay button */}
                     <div className="payment-total-area">
+                        {/* Loyalty points section (Moved from OrderScreen) */}
+                        {loyaltyEnabled && selectedCustomer && (
+                            <div className="loyalty-section glass-card" style={{ marginBottom: '20px', padding: '15px' }}>
+                                <div className="loyalty-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <div className="loyalty-current">
+                                        <span className="loyalty-label" style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>⭐ Điểm hiện tại</span>
+                                        <span className="loyalty-value" style={{ fontWeight: 'bold' }}>{customerPoints.toLocaleString()} điểm</span>
+                                    </div>
+                                    <div className="loyalty-earned" style={{ textAlign: 'right' }}>
+                                        <span className="loyalty-label" style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>📈 Điểm tích lũy</span>
+                                        <span className="loyalty-value loyalty-earned-value" style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>+{earnedPoints.toLocaleString()} điểm</span>
+                                    </div>
+                                </div>
+                                <button
+                                    className={`btn ${localUsedPoints > 0 ? 'btn-warning' : 'btn-secondary'} loyalty-use-btn`}
+                                    style={{ width: '100%', marginBottom: showUsePoints ? '10px' : '0' }}
+                                    onClick={() => setShowUsePoints(!showUsePoints)}
+                                >
+                                    🎁 Sử dụng điểm {localUsedPoints > 0 && `(${localUsedPoints.toLocaleString()} điểm)`}
+                                </button>
+                                {showUsePoints && (
+                                    <div className="loyalty-use-editor" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <input
+                                            type="number"
+                                            className="input-field loyalty-use-input"
+                                            value={localUsedPoints || ''}
+                                            placeholder="Nhập số điểm sử dụng..."
+                                            min="0"
+                                            max={customerPoints}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Math.min(customerPoints, parseInt(e.target.value) || 0));
+                                                updateUsedPoints(val);
+                                            }}
+                                            onClick={(e) => e.target.select()}
+                                            style={{ width: '100%' }}
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                                            <span className="loyalty-use-hint" style={{ color: 'var(--text-muted)' }}>
+                                                Tối đa: {customerPoints.toLocaleString()} điểm
+                                            </span>
+                                            {localUsedPoints > 0 && (
+                                                <span className="loyalty-use-deduction" style={{ color: 'var(--danger-color)', fontWeight: 'bold' }}>
+                                                    -{formatPrice(pointsDeduction)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="payment-total-row">
                             <span className="payment-total-label">Tạm tính</span>
                             <span className="payment-total-subtotal">{formatPrice(rawTotal)}</span>
@@ -386,7 +460,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         {pointsDeduction > 0 && (
                             <div className="payment-total-row payment-total-row-discount">
                                 <span className="payment-total-label">
-                                    Điểm sử dụng ({usedPoints} điểm)
+                                    Điểm sử dụng ({localUsedPoints} điểm)
                                 </span>
                                 <span className="payment-total-discount-value">-{formatPrice(pointsDeduction)}</span>
                             </div>
@@ -399,6 +473,26 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         {!selectedCustomer && (
                             <p className="payment-customer-required">⚠️ Chưa chọn khách hàng (có thể chọn ở màn hình order)</p>
                         )}
+                        <div className="payment-actions-row" style={{ marginBottom: '10px' }}>
+                            <button
+                                className="btn btn-secondary payment-print-btn"
+                                onClick={() => {
+                                    setTempNote(note);
+                                    setShowNotePopup(true);
+                                }}
+                            >
+                                📝 Ghi chú
+                            </button>
+                            <button
+                                className="btn btn-secondary payment-print-btn"
+                                onClick={() => {
+                                    setTempEcommerceCode(ecommerceCode);
+                                    setShowEcommerceCodePopup(true);
+                                }}
+                            >
+                                🛒 TMĐT Code
+                            </button>
+                        </div>
                         <div className="payment-actions-row">
                             <button
                                 className="btn btn-secondary payment-print-btn"
@@ -448,6 +542,8 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                     <p className="receipt-info">KH: {selectedCustomer.name}</p>
                                 )}
                                 <p className="receipt-info">NV: {authData?.user?.name}</p>
+                                {note && <p className="receipt-info"><strong>Ghi chú:</strong> {note}</p>}
+                                {ecommerceCode && <p className="receipt-info"><strong>TMĐT Code:</strong> {ecommerceCode}</p>}
                             </div>
                             <div className="receipt-divider">--------------------------------</div>
                             <table className="receipt-table">
@@ -461,11 +557,21 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                 <tbody>
                                     {orderItems.map((item, idx) => {
                                         const itemTotal = getItemTotal(item);
+                                        const rawLineTotal = getProductPrice(item.product) * item.quantity;
+                                        const hasDiscount = itemTotal < rawLineTotal;
+
                                         return (
                                             <tr key={idx}>
                                                 <td>{item.product.display_name || item.product.name}</td>
                                                 <td className="receipt-td-center">{item.quantity}</td>
-                                                <td className="receipt-td-right">{formatPrice(itemTotal)}</td>
+                                                <td className="receipt-td-right">
+                                                    {hasDiscount && (
+                                                        <span style={{ textDecoration: 'line-through', color: '#888', marginRight: '4px', fontSize: '0.9em' }}>
+                                                            {formatPrice(rawLineTotal)}
+                                                        </span>
+                                                    )}
+                                                    <span>{formatPrice(itemTotal)}</span>
+                                                </td>
                                             </tr>
                                         );
                                     })}
@@ -491,7 +597,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                 )}
                                 {pointsDeduction > 0 && (
                                     <div className="receipt-total-row">
-                                        <span>Điểm ({usedPoints})</span>
+                                        <span>Điểm ({localUsedPoints})</span>
                                         <span>-{formatPrice(pointsDeduction)}</span>
                                     </div>
                                 )}
@@ -504,6 +610,60 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             <div className="receipt-divider">--------------------------------</div>
                             <p className="receipt-footer">Bill tạm tính - Chưa thanh toán</p>
                             <p className="receipt-footer">Cảm ơn quý khách!</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Note Popup */}
+            {showNotePopup && (
+                <div className="popup-overlay" onClick={() => setShowNotePopup(false)}>
+                    <div className="glass-card popup-card" style={{ width: '400px', padding: '20px', borderRadius: '16px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>📝 Ghi chú đơn hàng</h3>
+                            <button style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setShowNotePopup(false)}>✕</button>
+                        </div>
+                        <div style={{ marginBottom: '20px' }}>
+                            <textarea
+                                className="input-field"
+                                rows="4"
+                                placeholder="Nhập ghi chú cho đơn hàng..."
+                                value={tempNote}
+                                onChange={(e) => setTempNote(e.target.value)}
+                                style={{ width: '100%', resize: 'none' }}
+                                autoFocus
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowNotePopup(false)}>Hủy</button>
+                            <button className="btn btn-primary" onClick={() => { setNote(tempNote); setShowNotePopup(false); }}>Lưu ghi chú</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Ecommerce Code Popup */}
+            {showEcommerceCodePopup && (
+                <div className="popup-overlay" onClick={() => setShowEcommerceCodePopup(false)}>
+                    <div className="glass-card popup-card" style={{ width: '400px', padding: '20px', borderRadius: '16px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>🛒 Ecommerce Code</h3>
+                            <button style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setShowEcommerceCodePopup(false)}>✕</button>
+                        </div>
+                        <div style={{ marginBottom: '20px' }}>
+                            <input
+                                type="text"
+                                className="input-field"
+                                placeholder="Nhập mã Ecommerce..."
+                                value={tempEcommerceCode}
+                                onChange={(e) => setTempEcommerceCode(e.target.value)}
+                                style={{ width: '100%' }}
+                                autoFocus
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowEcommerceCodePopup(false)}>Hủy</button>
+                            <button className="btn btn-primary" onClick={() => { setEcommerceCode(tempEcommerceCode); setShowEcommerceCodePopup(false); }}>Lưu mã</button>
                         </div>
                     </div>
                 </div>

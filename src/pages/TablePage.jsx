@@ -460,6 +460,88 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                             ) : (
                                 <div className="history-detail">
                                     <div className="history-detail-info">
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '15px' }}>
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={() => {
+                                                    const printWindow = window.open('', '_blank');
+                                                    printWindow.document.write(`
+                                                        <html>
+                                                        <head>
+                                                            <title>In Bill Cũ</title>
+                                                            <style>
+                                                                body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; color: #000; }
+                                                                h2 { text-align: center; margin-bottom: 5px; font-size: 1.2rem; }
+                                                                p { text-align: center; margin: 2px 0; font-size: 0.9rem; }
+                                                                .info { text-align: left; }
+                                                                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+                                                                th, td { text-align: left; padding: 4px 0; border-bottom: 1px dashed #ccc; }
+                                                                th:last-child, td:last-child { text-align: right; }
+                                                                th:nth-child(2), td:nth-child(2) { text-align: center; }
+                                                                .totals { margin-top: 15px; font-size: 0.9rem; }
+                                                                .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                                                                .grand-total { font-size: 1.2rem; font-weight: bold; margin-top: 10px; border-top: 2px dashed #000; padding-top: 10px; }
+                                                                @media print {
+                                                                    .no-print { display: none; }
+                                                                }
+                                                            </style>
+                                                        </head>
+                                                        <body>
+                                                            <h2>${posConfig?.name || 'HotPOS'}</h2>
+                                                            <p>HÓA ĐƠN BÁN HÀNG (IN LẠI)</p>
+                                                            <div class="info">
+                                                                <p>Mã đơn: ${selectedOrder.pos_reference || selectedOrder.name}</p>
+                                                                <p>Ngày: ${new Date(selectedOrder.date_order).toLocaleString('vi-VN')}</p>
+                                                                <p>KH: ${selectedOrder.partner_id ? (Array.isArray(selectedOrder.partner_id) ? selectedOrder.partner_id[1] : selectedOrder.partner_id) : 'Khách vãng lai'}</p>
+                                                            </div>
+                                                            <table>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Món</th>
+                                                                        <th>SL</th>
+                                                                        <th>T.Tiền</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ${orderLines.map(line => `
+                                                                        <tr>
+                                                                            <td>${Array.isArray(line.product_id) ? line.product_id[1] : line.product_id}</td>
+                                                                            <td>${line.qty}</td>
+                                                                            <td>${new Intl.NumberFormat('vi-VN').format(Math.round(line.price_subtotal_incl))}đ</td>
+                                                                        </tr>
+                                                                    `).join('')}
+                                                                </tbody>
+                                                            </table>
+                                                            <div class="totals">
+                                                                <div class="total-row grand-total">
+                                                                    <span>TỔNG CỘNG</span>
+                                                                    <span>${new Intl.NumberFormat('vi-VN').format(Math.round(selectedOrder.amount_total))}đ</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="no-print" style="margin-top: 20px; text-align: center;">
+                                                                <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">IN HÓA ĐƠN</button>
+                                                            </div>
+                                                            <script>
+                                                                setTimeout(() => window.print(), 500);
+                                                            </script>
+                                                        </body>
+                                                        </html>
+                                                    `);
+                                                    printWindow.document.close();
+                                                }}
+                                            >
+                                                🖨️ In lại bill
+                                            </button>
+                                            <button
+                                                className="btn btn-warning"
+                                                onClick={() => {
+                                                    // Placeholder cho chức năng trả hàng
+                                                    alert("Chức năng trả hàng sẽ được thêm vào sau.");
+                                                }}
+                                            >
+                                                ↩️ Trả hàng
+                                            </button>
+                                        </div>
                                         <div className="history-detail-row">
                                             <span className="history-detail-label">Mã đơn</span>
                                             <span className="history-detail-value">{selectedOrder.pos_reference || selectedOrder.name}</span>

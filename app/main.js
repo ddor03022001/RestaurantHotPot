@@ -195,6 +195,20 @@ ipcMain.handle('odoo:closePosSession', async (event, sessionId) => {
     }
 });
 
+ipcMain.handle('odoo:createProductionOrder', async (event, productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId) => {
+    try {
+        if (!odooSession) throw new Error('Not logged in');
+        const { url, db, uid, password } = odooSession;
+        const result = await OdooService.createProductionOrder(
+            url, db, uid, password,
+            productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId
+        );
+        return { success: true, data: result };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 // ========== App Lifecycle ==========
 
 app.whenReady().then(createWindow);

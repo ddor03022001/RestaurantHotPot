@@ -120,7 +120,13 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [localUsedPoints, setLocalUsedPoints] = useState(table.usedPoints || 0);
 
     const afterDiscountTotal = Math.max(0, subtotal - billDiscountAmount);
-    const earnedPoints = Math.floor(afterDiscountTotal / 100);
+    let earnedPoints;
+    if (selectedCustomer.group_id && selectedCustomer.group_id.name === "Khách lẻ" || selectedCustomer.group_id && selectedCustomer.group_id.name === "Doanh nghiệp" || selectedCustomer.group_id && selectedCustomer.group_id.name === "Bạn mới") {
+        earnedPoints = 0;
+    } else {
+        earnedPoints = Math.floor(afterDiscountTotal / 100)
+    }
+    // const earnedPoints = Math.floor(afterDiscountTotal / 100);
 
     const updateUsedPoints = (val) => {
         setLocalUsedPoints(val);
@@ -205,54 +211,128 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     statement_id: statementId
                 }]);
             }
+            // check loyalty
+            const defaultPl = paymentJournals.find(pl => pl.code === 'LOYAL') || null;
+            if (defaultPl && localUsedPoints > 0) {
+                const stResp = await window.electronAPI.executeKw(
+                    'account.bank.statement', 'search_read',
+                    [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', defaultPl.id]]],
+                    { fields: ['id'], limit: 1 }
+                );
 
+                let statementId = false;
+                if (stResp.success && stResp.result && stResp.result.length > 0) {
+                    statementId = stResp.result[0].id;
+                }
+
+                statementIds.push([0, 0, {
+                    journal_id: defaultPl.id,
+                    amount: localUsedPoints,
+                    name: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    statement_id: statementId
+                }]);
+            }
             // Calculate the discount distribution ratio for global discounts
             const ratio = subtotal > 0 ? orderTotal / subtotal : 1;
-
-            const lines = orderItems.map(item => {
+            // console.log(orderItems);
+            let lines = orderItems.map(item => {
                 const price = getProductPrice(item.product);
                 // What they would pay for this line specifically due to item-level discount:
                 const itemOriginalTotalForThisLine = getItemTotal(item);
                 // Final amount this line contributes, factoring in bill discounts and points:
-                const itemFinalTotal = itemOriginalTotalForThisLine * ratio;
-
+                // const itemFinalTotal = itemOriginalTotalForThisLine * ratio;
                 const rawTotal = price * item.quantity;
-                const effectiveDiscountPct = rawTotal > 0 ? ((rawTotal - itemFinalTotal) / rawTotal) * 100 : 0;
-
+                const effectiveDiscountPct = item.discount.type === 'percent' ? rawTotal - (rawTotal * item.discount.value / 100) : rawTotal - item.discount.value;
+                // const effectiveDiscountPct = rawTotal > 0 ? ((rawTotal - itemFinalTotal) / rawTotal) * 100 : 0;
+                let combo_item_ids = {};
+                if (item.comboItems && item.comboItems.length > 0) {
+                    combo_item_ids = item.comboItems.reduce((acc, comboItem) => {
+                        acc[comboItem.product.id] = comboItem.quantity;
+                        return acc;
+                    }, {});
+                }
                 return [0, 0, {
                     product_id: item.product.id,
                     qty: item.quantity,
                     price_unit: price,
-                    discount: effectiveDiscountPct,
-                    tax_ids: [[6, false, item.product.taxes_id || []]]
+                    price_subtotal: item.product.tax_id ? effectiveDiscountPct / ((100 + item.product.tax_id[0].amount) / 100) : effectiveDiscountPct,
+                    price_subtotal_incl: effectiveDiscountPct,
+                    combo_item_ids: combo_item_ids,
+                    discount: item.discount.type === 'percent' ? item.discount.value : 0,
+                    discount_amount: item.discount.type === 'amount' ? item.discount.value : 0,
+                    tax_ids: [[6, false, item.product.taxes_id || []]],
+                    plus_point: localUsedPoints > 0 ? 0 : effectiveDiscountPct,
+                    session_info: {
+                        user: {
+                            id: authData.user.uid,
+                            name: authData.user.name
+                        },
+                        pos: {
+                            id: posConfig.session.id,
+                            name: posConfig.session.name
+                        }
+                    },
                 }];
             });
-
+            if (billDiscountAmount > 0) {
+                const productDiscount = posData.products.find(pl => pl.allow_discount_global === true) || null;
+                if (productDiscount) {
+                    lines.push([0, 0, {
+                        product_id: productDiscount.id,
+                        qty: -1,
+                        price_unit: billDiscountAmount,
+                        price_subtotal: productDiscount.tax_id ? - billDiscountAmount / ((100 + productDiscount.tax_id[0].amount) / 100) : - billDiscountAmount,
+                        price_subtotal_incl: - billDiscountAmount,
+                        discount_reason: 'Global Discount',
+                        tax_ids: [[6, false, productDiscount.taxes_id || []]],
+                        plus_point: localUsedPoints > 0 ? 0 : - billDiscountAmount,
+                        session_info: {
+                            user: {
+                                id: authData.user.uid,
+                                name: authData.user.name
+                            },
+                            pos: {
+                                id: posConfig.session.id,
+                                name: posConfig.session.name
+                            }
+                        },
+                    }]);
+                }
+            }
             // Local time formatted for Odoo
-            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 19).replace('T', ' ');
+            // const tzoffset = 420 * 60000;
+            const localISOTime = (new Date(Date.now())).toISOString().slice(0, 19).replace('T', ' ');
 
             const uidId = Math.random().toString(36).substr(2, 9);
 
+            const amount_total = lines.reduce((sum, line) => sum + line[2].price_subtotal_incl, 0);
+            const amount_paid = amount_total;
+            const amount_tax = lines.reduce((sum, line) => sum + (line[2].price_subtotal_incl - line[2].price_subtotal), 0);
+            console.log(earnedPoints);
             const orderData = {
                 data: {
                     name: `Order ${uidId}`,
-                    amount_paid: totalPaid,
-                    amount_return: changeAmount,
-                    amount_tax: 0, // Simplified, modify if tax calculation is needed locally
-                    amount_total: orderTotal,
+                    amount_paid: amount_paid,
+                    amount_return: 0,
+                    amount_tax: amount_tax, // Simplified, modify if tax calculation is needed locally
+                    amount_total: amount_total,
                     creation_date: localISOTime,
                     fiscal_position_id: false,
                     lines: lines,
                     partner_id: selectedCustomer ? selectedCustomer.id : false,
+                    pricelist_id: selectedPricelist ? selectedPricelist.id : false,
                     pos_session_id: posConfig.session.id,
+                    plus_point: localUsedPoints > 0 ? 0 : earnedPoints,
                     sequence_number: 1, // Optional placeholder
                     statement_ids: statementIds,
+                    ecommerce_code: ecommerceCode,
+                    note: note,
+                    currency_id: posConfig.currency_id[0],
                     uid: uidId,
-                    user_id: authData.user.id
+                    user_id: authData.user.uid
                 },
                 id: uidId,
-                to_invoice: false
+                to_invoice: true
             };
 
             const res = await window.electronAPI.createPosOrder(orderData);

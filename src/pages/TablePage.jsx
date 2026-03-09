@@ -386,10 +386,10 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                     <div className="table-legend-color table-legend-occupied"></div>
                     <span>Đang dùng</span>
                 </div>
-                <div className="table-legend-item">
+                {/* <div className="table-legend-item">
                     <div className="table-legend-color table-legend-merged"></div>
                     <span>Đã gộp</span>
-                </div>
+                </div> */}
             </div>
 
             {/* Popup: Confirm open table */}

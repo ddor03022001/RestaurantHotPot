@@ -841,6 +841,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         <span className="popup-col popup-col-name">Tên</span>
                         <span className="popup-col popup-col-phone">SĐT</span>
                         <span className="popup-col popup-col-email">Email</span>
+                        <span className="popup-col popup-col-group">Nhóm</span>
                         <span className="popup-col popup-col-check"></span>
                     </div>
                     {/* Table rows */}
@@ -853,6 +854,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                             <span className="popup-col popup-col-name">{c.name}</span>
                             <span className="popup-col popup-col-phone">{c.phone || c.mobile || '—'}</span>
                             <span className="popup-col popup-col-email">{c.email || '—'}</span>
+                            <span className="popup-col popup-col-group">{c.group_id ? c.group_id.name : '—'}</span>
                             <span className="popup-col popup-col-check">
                                 {selectedCustomer?.id === c.id && <span className="popup-list-item-check">✓</span>}
                             </span>

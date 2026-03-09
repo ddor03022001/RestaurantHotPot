@@ -96,7 +96,7 @@ class OdooService {
     static async getPosConfigs(url, db, uid, password) {
         const configs = await OdooService._execute(url, db, uid, password, 'pos.config', 'search_read', [[]], {
             fields: [
-                'id', 'name', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id',
+                'id', 'name', 'currency_id', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id',
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
                 'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point'
             ],
@@ -182,10 +182,30 @@ class OdooService {
         const products = await OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'display_name', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids'],
+                fields: ['id', 'name', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids'],
             }
         );
 
+        // taxes
+        const allTaxIds = [];
+        for (const p of products) {
+            if (p.taxes_id && p.taxes_id.length > 0) {
+                allTaxIds.push(...p.taxes_id);
+            }
+        }
+        const taxes = await OdooService._execute(url, db, uid, password, 'account.tax', 'search_read',
+            [[['id', 'in', allTaxIds]]],
+            { fields: ['id', 'name', 'amount', 'type_tax_use'] }
+        );
+        const taxMap = {};
+        for (const tax of taxes) {
+            taxMap[tax.id] = tax;
+        }
+        for (const p of products) {
+            if (p.taxes_id && p.taxes_id.length > 0) {
+                p.tax_id = p.taxes_id.map(id => taxMap[id]);
+            }
+        }
         // Collect all MRP item IDs from products with is_pos_mrp
         const allMrpIds = [];
         for (const p of products) {
@@ -235,7 +255,7 @@ class OdooService {
         let comboMap = {};
         if (allComboIds.length > 0) {
             const comboItems = await OdooService._execute(url, db, uid, password, 'pos.combo.item', 'search_read',
-                [[['id', 'in', allComboIds]]],
+                [[['id', 'in', allComboIds], ['required', '=', true]]],
                 { fields: ['id', 'name', 'product_ids', 'quantity'] }
             );
             for (const item of comboItems) {

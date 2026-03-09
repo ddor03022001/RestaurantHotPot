@@ -872,6 +872,11 @@
     min-width: 0;
 }
 
+.popup-col-group {
+    flex: 1;
+    min-width: 0;
+}
+
 .popup-col-check {
     width: 32px;
     flex-shrink: 0;

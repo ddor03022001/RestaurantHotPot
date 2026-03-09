@@ -441,7 +441,7 @@ class OdooService {
      */
     static async getPosOrders(url, db, uid, password, configId, days = 7) {
         const dateFrom = new Date();
-        dateFrom.setDate(dateFrom.getDate() - days);
+        dateFrom.setDate(dateFrom.getDate() - days + 1);
         const dateStr = dateFrom.toISOString().split('T')[0] + ' 00:00:00';
 
         const orders = await OdooService._execute(url, db, uid, password, 'pos.order', 'search_read',
@@ -453,10 +453,24 @@ class OdooService {
                 fields: ['id', 'name', 'date_order', 'partner_id', 'amount_total', 'amount_tax',
                     'amount_paid', 'amount_return', 'state', 'pos_reference', 'lines',
                     'session_id', 'user_id'],
-                order: 'date_order desc',
+                order: 'id desc',
             }
         );
-        return orders;
+
+        return orders.map(order => {
+            if (order.date_order) {
+                // Khởi tạo đối tượng Date từ chuỗi Odoo trả về (mặc định hiểu là UTC)
+                let date = new Date(order.date_order + " Z");
+
+                // Cộng thêm 7 tiếng
+                date.setHours(date.getHours() + 7);
+
+                // Định dạng lại thành chuỗi YYYY-MM-DD HH:mm:ss hoặc để nguyên đối tượng Date
+                // Ở đây tôi định dạng lại thành chuỗi dễ đọc:
+                order.date_order = date.toISOString().replace('T', ' ').split('.')[0];
+            }
+            return order;
+        });
     }
 
     /**

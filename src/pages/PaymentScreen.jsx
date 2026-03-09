@@ -65,7 +65,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 break;
             }
         }
-        return price;
+        return parseInt(price);
     };
 
     // Multi payment lines: [{ journalId, journalName, amount }]
@@ -90,9 +90,9 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         const disc = item.discount || { type: 'percent', value: 0 };
         if (disc.value <= 0) return lineTotal;
         if (disc.type === 'percent') {
-            return lineTotal * (1 - Math.min(disc.value, 100) / 100);
+            return parseInt(lineTotal * (1 - Math.min(disc.value, 100) / 100));
         }
-        return Math.max(0, lineTotal - disc.value);
+        return parseInt(Math.max(0, lineTotal - disc.value));
     };
 
     // Subtotal after per-item discounts
@@ -101,16 +101,16 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     // Total item-level discounts
     const totalItemDiscounts = orderItems.reduce((sum, item) => {
         const lineTotal = getProductPrice(item.product) * item.quantity;
-        return sum + (lineTotal - getItemTotal(item));
+        return parseInt(sum + (lineTotal - getItemTotal(item)));
     }, 0);
 
     // Bill discount amount
     const billDiscountAmount = useMemo(() => {
         if (billDiscount.value <= 0) return 0;
         if (billDiscount.type === 'percent') {
-            return subtotal * Math.min(billDiscount.value, 100) / 100;
+            return parseInt(subtotal * Math.min(billDiscount.value, 100) / 100);
         }
-        return Math.min(billDiscount.value, subtotal);
+        return parseInt(Math.min(billDiscount.value, subtotal));
     }, [subtotal, billDiscount]);
 
     // Loyalty points state (moved from OrderScreen)
@@ -255,13 +255,14 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     product_id: item.product.id,
                     qty: item.quantity,
                     price_unit: price,
-                    price_subtotal: item.product.tax_id ? effectiveDiscountPct / ((100 + item.product.tax_id[0].amount) / 100) : effectiveDiscountPct,
+                    price_subtotal: item.product.tax_id ? parseInt(effectiveDiscountPct / ((100 + item.product.tax_id[0].amount) / 100)) : parseInt(effectiveDiscountPct),
                     price_subtotal_incl: effectiveDiscountPct,
                     combo_item_ids: combo_item_ids,
+                    discount_type: item.discount.type,
                     discount: item.discount.type === 'percent' ? item.discount.value : 0,
                     discount_amount: item.discount.type === 'amount' ? item.discount.value : 0,
                     tax_ids: [[6, false, item.product.taxes_id || []]],
-                    plus_point: localUsedPoints > 0 ? 0 : effectiveDiscountPct,
+                    plus_point: localUsedPoints > 0 || billDiscountAmount > 0 ? 0 : effectiveDiscountPct / 100,
                     session_info: {
                         user: {
                             id: authData.user.uid,
@@ -281,11 +282,10 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         product_id: productDiscount.id,
                         qty: -1,
                         price_unit: billDiscountAmount,
-                        price_subtotal: productDiscount.tax_id ? - billDiscountAmount / ((100 + productDiscount.tax_id[0].amount) / 100) : - billDiscountAmount,
+                        price_subtotal: productDiscount.tax_id ? parseInt(- billDiscountAmount / ((100 + productDiscount.tax_id[0].amount) / 100)) : parseInt(- billDiscountAmount),
                         price_subtotal_incl: - billDiscountAmount,
                         discount_reason: 'Global Discount',
                         tax_ids: [[6, false, productDiscount.taxes_id || []]],
-                        plus_point: localUsedPoints > 0 ? 0 : - billDiscountAmount,
                         session_info: {
                             user: {
                                 id: authData.user.uid,
@@ -308,7 +308,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             const amount_total = lines.reduce((sum, line) => sum + line[2].price_subtotal_incl, 0);
             const amount_paid = amount_total;
             const amount_tax = lines.reduce((sum, line) => sum + (line[2].price_subtotal_incl - line[2].price_subtotal), 0);
-            console.log(earnedPoints);
+
             const orderData = {
                 data: {
                     name: `Order ${uidId}`,
@@ -322,7 +322,8 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     partner_id: selectedCustomer ? selectedCustomer.id : false,
                     pricelist_id: selectedPricelist ? selectedPricelist.id : false,
                     pos_session_id: posConfig.session.id,
-                    plus_point: localUsedPoints > 0 ? 0 : earnedPoints,
+                    plus_point: localUsedPoints > 0 || billDiscountAmount > 0 ? 0 : earnedPoints,
+                    redeem_point: localUsedPoints > 0 ? localUsedPoints : 0,
                     sequence_number: 1, // Optional placeholder
                     statement_ids: statementIds,
                     ecommerce_code: ecommerceCode,
@@ -334,7 +335,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 id: uidId,
                 to_invoice: true
             };
-
+            console.log(orderData);
             const res = await window.electronAPI.createPosOrder(orderData);
             if (!res.success) {
                 throw new Error(res.error);

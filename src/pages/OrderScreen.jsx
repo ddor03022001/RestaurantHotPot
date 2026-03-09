@@ -205,7 +205,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 break;
             }
         }
-        return price;
+        return parseInt(price);
     };
 
     const syncBillDiscount = (newBillDiscount) => {
@@ -462,14 +462,14 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         const disc = item.discount || { type: 'percent', value: 0 };
         if (disc.value <= 0) return lineTotal;
         if (disc.type === 'percent') {
-            return lineTotal * (1 - Math.min(disc.value, 100) / 100);
+            return parseInt(lineTotal * (1 - Math.min(disc.value, 100) / 100));
         }
-        return Math.max(0, lineTotal - disc.value);
+        return parseInt(Math.max(0, lineTotal - disc.value));
     };
 
     const getItemDiscountAmount = (item) => {
         const lineTotal = getProductPrice(item.product) * item.quantity;
-        return lineTotal - getItemTotal(item);
+        return parseInt(lineTotal - getItemTotal(item));
     };
 
     const subtotal = orderItems.reduce((sum, item) => sum + getItemTotal(item), 0);
@@ -477,9 +477,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const billDiscountAmount = useMemo(() => {
         if (billDiscount.value <= 0) return 0;
         if (billDiscount.type === 'percent') {
-            return subtotal * Math.min(billDiscount.value, 100) / 100;
+            return parseInt(subtotal * Math.min(billDiscount.value, 100) / 100);
         }
-        return Math.min(billDiscount.value, subtotal);
+        return parseInt(Math.min(billDiscount.value, subtotal));
     }, [subtotal, billDiscount]);
 
     // Loyalty points are now handled entirely in PaymentScreen.jsx

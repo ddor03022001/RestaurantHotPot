@@ -64,4 +64,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Get user info
     getUserInfo: () =>
         ipcRenderer.invoke('odoo:getUserInfo'),
+
+    // Get stock products
+    getStockProducts: (product_ids, location_ids) =>
+        ipcRenderer.invoke('odoo:getStockProducts', product_ids, location_ids),
 });

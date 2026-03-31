@@ -73,4 +73,4 @@ Do liên quan đến API XML-RPC trực tiếp thay vì Session, quá trình Log
 Luôn đảm bảo rằng Odoo server của bạn cho phép nhận request API RPC XML (`/xmlrpc/2/common`, `/xmlrpc/2/object`).
 
 ---
-*(Phát triển bởi team HotPos)*
+*(Phát triển bởi Quang Huy Seatek)*

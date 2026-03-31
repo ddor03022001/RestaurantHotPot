@@ -173,6 +173,17 @@ ipcMain.handle('odoo:createPosOrder', async (event, orderData) => {
     }
 });
 
+ipcMain.handle('odoo:getStockProducts', async (event, product_ids, location_ids) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const result = await OdooService.getStockProducts(url, db, uid, password, product_ids, location_ids);
+        return { success: true, result };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('odoo:executeKw', async (event, model, method, args, kwargs) => {
     if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
     try {

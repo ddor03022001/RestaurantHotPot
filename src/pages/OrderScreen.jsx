@@ -214,6 +214,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     };
 
     const syncCustomer = (customer) => {
+        console.log(customer);
         setSelectedCustomer(customer);
         updateTable(table.id, { selectedCustomer: customer });
         if (customer.group_id) {
@@ -262,7 +263,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             const q = customerSearch.toLowerCase().replace(/\s/g, '');
             list = customers.filter(
                 (c) =>
-                    c.name.toLowerCase().includes(q) ||
+                    c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
                     (c.phone && c.phone.replace(/\s/g, '').includes(q)) ||
                     (c.mobile && c.mobile.replace(/\s/g, '').includes(q)) ||
                     (c.email && c.email.toLowerCase().includes(q))

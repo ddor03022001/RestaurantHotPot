@@ -49,7 +49,6 @@ class OdooService {
                 'location_dest_id': locationDestId,
                 'mrp_picking_type_id': pickingTypeId
             }]);
-            console.log(result);
             return result;
         } catch (error) {
             // Odoo's pos.mrp create_from_ui returns a RecordSet which XML-RPC cannot serialize,
@@ -483,6 +482,20 @@ class OdooService {
                 fields: ['id', 'order_id', 'product_id', 'qty', 'price_unit',
                     'price_subtotal', 'price_subtotal_incl', 'discount'],
             }
+        );
+    }
+
+    /**
+     * Get Stock proudcts
+     */
+    static getStockProducts(url, db, uid, password, product_ids, location_ids) {
+        const domain = [
+            ['product_id', 'in', product_ids],
+            ['location_id', 'in', location_ids]
+        ];
+        return OdooService._execute(url, db, uid, password, 'stock.quant', 'read_group',
+            [domain, ['quantity'], ['product_id', 'location_id']],
+            {}
         );
     }
 

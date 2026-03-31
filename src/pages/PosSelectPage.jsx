@@ -92,6 +92,7 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                 pricelists = plResult.success ? plResult.pricelists : [];
                 promotions = promoResult.success ? promoResult.promotions : [];
                 paymentJournals = journalResult.success ? journalResult.journals : [];
+                const stockProducts = await window.electronAPI.getStockProducts(products.map(p => p.id), [config.stock_location_id[0]]);
             } else {
                 // Browser mock data
                 await new Promise((r) => setTimeout(r, 600));

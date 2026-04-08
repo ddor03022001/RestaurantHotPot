@@ -1371,7 +1371,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                         labels.push(
                                             <div key={`${item.lineId}-${i}`} className="product-label">
                                                 <div className="label-left">
-                                                    <img src="/logo.png" alt="Logo" className="label-logo" />
+                                                    <img src={item.product.image_medium ? `data:image/png;base64,${item.product.image_medium}` : "/logo.png"} alt="Logo" className="label-logo" />
                                                     <div className="label-table-info">Bàn {table.number}</div>
                                                 </div>
                                                 <div className="label-right">

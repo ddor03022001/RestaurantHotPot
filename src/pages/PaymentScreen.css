@@ -216,6 +216,12 @@
     font-weight: 500;
 }
 
+.payment-order-item-note {
+    font-size: 11px;
+    color: #38bdf8;
+    opacity: 0.85;
+}
+
 .payment-order-item-right {
     display: flex;
     flex-direction: column;

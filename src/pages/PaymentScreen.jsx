@@ -262,6 +262,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     discount: item.discount.type === 'percent' ? item.discount.value : 0,
                     discount_amount: item.discount.type === 'amount' ? item.discount.value : 0,
                     tax_ids: [[6, false, item.product.taxes_id || []]],
+                    note: item.note || '',
                     plus_point: localUsedPoints > 0 || billDiscountAmount > 0 ? 0 : effectiveDiscountPct / 100,
                     session_info: {
                         user: {
@@ -466,6 +467,9 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                                     <span className="payment-order-item-discount">
                                                         CK: {item.discount.type === 'percent' ? `${item.discount.value}%` : formatPrice(item.discount.value)}
                                                     </span>
+                                                )}
+                                                {item.note && item.note.trim() && (
+                                                    <span className="payment-order-item-note">📝 {item.note}</span>
                                                 )}
                                                 {item.isCombo && item.comboItems && (
                                                     <div className="payment-combo-sub-items">
@@ -740,18 +744,27 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                         const hasDiscount = itemTotal < rawLineTotal;
 
                                         return (
-                                            <tr key={idx}>
-                                                <td>{item.product.display_name || item.product.name}</td>
-                                                <td className="receipt-td-center">{item.quantity}</td>
-                                                <td className="receipt-td-right">
-                                                    {hasDiscount && (
-                                                        <span style={{ textDecoration: 'line-through', color: '#888', marginRight: '4px', fontSize: '0.9em' }}>
-                                                            {formatPrice(rawLineTotal)}
-                                                        </span>
-                                                    )}
-                                                    <span>{formatPrice(itemTotal)}</span>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={idx}>
+                                                <tr>
+                                                    <td>{item.product.display_name || item.product.name}</td>
+                                                    <td className="receipt-td-center">{item.quantity}</td>
+                                                    <td className="receipt-td-right">
+                                                        {hasDiscount && (
+                                                            <span style={{ textDecoration: 'line-through', color: '#888', marginRight: '4px', fontSize: '0.9em' }}>
+                                                                {formatPrice(rawLineTotal)}
+                                                            </span>
+                                                        )}
+                                                        <span>{formatPrice(itemTotal)}</span>
+                                                    </td>
+                                                </tr>
+                                                {item.note && item.note.trim() && (
+                                                    <tr>
+                                                        <td colSpan="3" style={{ fontSize: '0.85em', fontStyle: 'italic', paddingLeft: '8px', color: '#555' }}>
+                                                            📝 {item.note}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                 </tbody>

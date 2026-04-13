@@ -1,4 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import OrderHistoryPopup from '../components/OrderHistoryPopup';
+import { formatPrice, formatDate, getStateLabel, getStateClass } from '../utils/formatters';
+import { useOrderHistory } from '../hooks/useOrderHistory';
 import './OrderScreen.css';
 
 // Stable popup component (outside OrderScreen to avoid re-creation on every render)
@@ -19,7 +22,8 @@ function PopupOverlay({ show, onClose, title, className, children }) {
     );
 }
 
-function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment }) {
+function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment, posMode, onToggleMode, onCloseSession, onGoToManagement }) {
+    const isRetail = posMode === 'retail';
     const { products = [], categories = [], customers = [], pricelists = [], promotions = [], defaultPricelistId = null } = posData || {};
     const [orderItems, setOrderItems] = useState(table.orderItems || []);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -45,6 +49,14 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     // Label printing state
     const [showLabelPopup, setShowLabelPopup] = useState(false);
     const [showProduceConfirm, setShowProduceConfirm] = useState(false);
+
+    // Order history — shared hook (for retail mode)
+    const history = useOrderHistory(posConfig?.id);
+
+    // Close session state (for retail mode)
+    const [showCloseSessionPopup, setShowCloseSessionPopup] = useState(false);
+    const [closingSession, setClosingSession] = useState(false);
+    const [closeSessionError, setCloseSessionError] = useState('');
 
     const openProduction = (prod) => {
         setSelectedProduction(prod);
@@ -504,9 +516,23 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const afterDiscount = Math.max(0, subtotal - billDiscountAmount);
     const orderTotal = Math.max(0, afterDiscount);
 
-    const formatPrice = useCallback((price) => {
-        return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
-    }, []);
+    // formatPrice, formatDate, getStateLabel, getStateClass — imported from utils/formatters
+
+    // Close session handler (retail mode)
+    const handleRetailCloseSession = async () => {
+        setClosingSession(true);
+        setCloseSessionError('');
+        try {
+            const result = await onCloseSession();
+            if (!result.success) {
+                setCloseSessionError(result.error || 'Không thể đóng ca');
+                setClosingSession(false);
+            }
+        } catch (err) {
+            setCloseSessionError(err.message);
+            setClosingSession(false);
+        }
+    };
 
     return (
         <div className="order-screen">
@@ -514,23 +540,46 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             <header className="order-header">
                 <div className="order-header-left">
                     <button className="btn btn-secondary order-back-btn" onClick={onBack}>
-                        ← Bàn
+                        {isRetail ? '← Chọn POS' : '← Bàn'}
                     </button>
                     <div className="order-header-info">
                         <h1 className="order-header-title">
-                            Bàn {table.number}
-                            {table.mergedTables && table.mergedTables.length > 0 && (
-                                <span className="order-merged-badge">
-                                    + Bàn {table.mergedTables.join(', ')}
-                                </span>
+                            {isRetail ? (
+                                'Bán hàng'
+                            ) : (
+                                <>
+                                    Bàn {table.number}
+                                    {table.mergedTables && table.mergedTables.length > 0 && (
+                                        <span className="order-merged-badge">
+                                            + Bàn {table.mergedTables.join(', ')}
+                                        </span>
+                                    )}
+                                </>
                             )}
                         </h1>
                         <p className="order-header-meta">{posConfig.name}</p>
                     </div>
                 </div>
 
-                {/* Header toolbar: Customer, Pricelist, Promotion */}
+                {/* Header toolbar: Mode toggle, Customer, Pricelist, Promotion */}
                 <div className="order-header-toolbar">
+                    {/* Mode toggle */}
+                    <div className="order-mode-toggle">
+                        <button
+                            className={`order-mode-btn ${!isRetail ? 'order-mode-btn-active' : ''}`}
+                            onClick={() => onToggleMode('restaurant')}
+                            title="Chế độ nhà hàng — hiển thị danh sách bàn"
+                        >
+                            🍽️ Nhà hàng
+                        </button>
+                        <button
+                            className={`order-mode-btn ${isRetail ? 'order-mode-btn-active' : ''}`}
+                            onClick={() => onToggleMode('retail')}
+                            title="Chế độ bán lẻ — vào thẳng màn hình order"
+                        >
+                            🛒 Bán lẻ
+                        </button>
+                    </div>
                     {/* Customer button */}
                     <button
                         className={`order-toolbar-btn ${selectedCustomer ? 'order-toolbar-btn-active' : ''}`}
@@ -576,7 +625,25 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 </div>
 
                 <div className="order-header-right">
-                    <span className="order-header-user">👤 {authData.user.name}</span>
+                    <button className="btn btn-secondary order-header-btn" onClick={onGoToManagement}>
+                        📊 Quản lý
+                    </button>
+                    {isRetail && (
+                        <>
+                            <button className="btn btn-secondary order-header-btn" onClick={history.openHistory}>
+                                📋 Lịch sử
+                            </button>
+                            <button className="btn btn-danger order-header-btn" onClick={() => { setShowCloseSessionPopup(true); setCloseSessionError(''); }}>
+                                🔒 Đóng ca
+                            </button>
+                            <button className="btn btn-secondary order-header-btn" onClick={onLogout}>
+                                🚪 Đăng xuất
+                            </button>
+                        </>
+                    )}
+                    {!isRetail && (
+                        <span className="order-header-user">👤 {authData.user.name}</span>
+                    )}
                 </div>
             </header>
 
@@ -645,7 +712,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 {/* Right: Order panel */}
                 <div className="order-panel">
                     <div className="order-panel-header">
-                        <h2 className="order-panel-title">Đơn hàng — Bàn {table.number}</h2>
+                        <h2 className="order-panel-title">
+                            {isRetail ? 'Đơn hàng' : `Đơn hàng — Bàn ${table.number}`}
+                        </h2>
                         <span className="order-panel-count">{orderItems.length} món</span>
                     </div>
                     <div className="order-items-list">
@@ -1392,6 +1461,60 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                     }
                                     return labels;
                                 })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== RETAIL MODE: Order History (shared component) ===== */}
+            <OrderHistoryPopup
+                show={isRetail && history.showHistory}
+                onClose={history.closeHistory}
+                orders={history.historyOrders}
+                loading={history.historyLoading}
+                error={history.historyError}
+                selectedOrder={history.selectedOrder}
+                orderLines={history.orderLines}
+                linesLoading={history.linesLoading}
+                onViewDetail={history.viewOrderDetail}
+                onBackToList={history.backToList}
+                posName={posConfig?.name}
+            />
+
+            {/* ===== RETAIL MODE: Close Session Popup ===== */}
+            {isRetail && showCloseSessionPopup && (
+                <div className="order-popup-overlay" onClick={() => setShowCloseSessionPopup(false)}>
+                    <div className="order-popup" onClick={(e) => e.stopPropagation()}>
+                        <div className="order-popup-header">
+                            <h3 className="order-popup-title">🔒 Đóng ca POS?</h3>
+                            <button className="order-popup-close" onClick={() => setShowCloseSessionPopup(false)}>✕</button>
+                        </div>
+                        <div className="order-popup-body" style={{ textAlign: 'center' }}>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                Bạn có chắc muốn đóng ca <strong>{posConfig.session?.name || 'phiên POS hiện tại'}</strong>?
+                                Sau khi đóng, bạn sẽ quay về màn hình chọn POS.
+                            </p>
+                            {closeSessionError && (
+                                <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px' }}>⚠️ {closeSessionError}</p>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <button
+                                    className="btn btn-danger"
+                                    onClick={handleRetailCloseSession}
+                                    disabled={closingSession}
+                                    style={{ width: '100%', padding: '12px' }}
+                                >
+                                    {closingSession ? '⏳ Đang đóng ca...' : '🔒 Xác nhận đóng ca'}
+                                </button>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => setShowCloseSessionPopup(false)}
+                                    disabled={closingSession}
+                                    style={{ width: '100%', padding: '12px' }}
+                                >
+                                    Hủy
+                                </button>
                             </div>
                         </div>
                     </div>

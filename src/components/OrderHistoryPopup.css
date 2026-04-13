@@ -1,0 +1,209 @@
+/* ========================
+   Shared Order History Popup
+   ======================== */
+
+.history-popup {
+    width: 90vw;
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.97) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-lg);
+    text-align: left;
+    padding: 0;
+}
+
+.history-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-popup-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.history-popup-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.history-popup-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.history-popup-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px;
+    gap: 12px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ===== Table (shared for order list & line detail) ===== */
+.history-table {
+    width: 100%;
+}
+
+.history-table-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.8);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.history-table-header .ht-col {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.history-table-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.history-table-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ht-col {
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ht-col-ref {
+    flex: 2;
+    min-width: 0;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.ht-col-date {
+    flex: 1.5;
+    min-width: 0;
+}
+
+.ht-col-customer {
+    flex: 1.5;
+    min-width: 0;
+}
+
+.ht-col-total {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.ht-col-state {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+/* ===== Detail view ===== */
+.history-detail {
+    padding: 20px 24px;
+}
+
+.history-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.history-detail-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+}
+
+.history-detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-detail-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.history-detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.history-detail-total {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-detail-total-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.history-detail-subtitle {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+/* State badge classes (shared) */
+.history-state-paid {
+    color: var(--accent-primary) !important;
+}
+
+.history-state-draft {
+    color: var(--accent-warning) !important;
+}
+
+.history-state-cancel {
+    color: #ef4444 !important;
+}

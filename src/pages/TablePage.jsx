@@ -1,8 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import TableCard from '../components/TableCard';
+import OrderHistoryPopup from '../components/OrderHistoryPopup';
+import { formatPrice } from '../utils/formatters';
+import { useOrderHistory } from '../hooks/useOrderHistory';
 import './TablePage.css';
 
-function TablePage({ authData, posConfig, posData, tables, setTables, onBack, onLogout, onCloseSession, onOpenTableOrder }) {
+function TablePage({ authData, posConfig, posData, tables, setTables, onBack, onLogout, onCloseSession, onOpenTableOrder, posMode, onToggleMode, onGoToManagement }) {
     const [popup, setPopup] = useState(null); // { type: 'confirm-open', table }
     const [closingSession, setClosingSession] = useState(false);
     const [closeSessionError, setCloseSessionError] = useState('');
@@ -17,96 +20,8 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
     const [splitDest, setSplitDest] = useState('');
     const [splitItems, setSplitItems] = useState({}); // { item_index: qty_to_move }
 
-    // Order history state
-    const [showHistory, setShowHistory] = useState(false);
-    const [historyOrders, setHistoryOrders] = useState([]);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [historyError, setHistoryError] = useState('');
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [orderLines, setOrderLines] = useState([]);
-    const [linesLoading, setLinesLoading] = useState(false);
-
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
-    };
-
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '—';
-        const d = new Date(dateStr);
-        return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    };
-
-    const getStateLabel = (state) => {
-        const map = { draft: 'Nháp', paid: 'Đã thanh toán', done: 'Hoàn tất', invoiced: 'Đã xuất HĐ', cancel: 'Đã hủy' };
-        return map[state] || state;
-    };
-
-    const getStateClass = (state) => {
-        if (state === 'paid' || state === 'done' || state === 'invoiced') return 'history-state-paid';
-        if (state === 'cancel') return 'history-state-cancel';
-        return 'history-state-draft';
-    };
-
-    // Fetch order history
-    const openHistory = async () => {
-        setShowHistory(true);
-        setSelectedOrder(null);
-        setHistoryLoading(true);
-        setHistoryError('');
-        try {
-            if (window.electronAPI) {
-                const result = await window.electronAPI.getPosOrders(posConfig.id, 7);
-                if (result.success) {
-                    setHistoryOrders(result.orders || []);
-                } else {
-                    setHistoryError(result.error);
-                }
-            } else {
-                await new Promise((r) => setTimeout(r, 500));
-                setHistoryOrders([
-                    { id: 1, name: 'POS/001', pos_reference: 'Order 00001-001-0001', date_order: '2026-02-25 10:30:00', partner_id: [1, 'Nguyễn Văn A'], amount_total: 450000, state: 'paid', lines: [1, 2, 3] },
-                    { id: 2, name: 'POS/002', pos_reference: 'Order 00001-001-0002', date_order: '2026-02-25 12:00:00', partner_id: false, amount_total: 120000, state: 'paid', lines: [4, 5] },
-                    { id: 3, name: 'POS/003', pos_reference: 'Order 00001-001-0003', date_order: '2026-02-24 18:45:00', partner_id: [2, 'Trần Thị B'], amount_total: 680000, state: 'done', lines: [6, 7, 8] },
-                ]);
-            }
-        } catch (err) {
-            setHistoryError(err.message);
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
-
-    // Fetch order lines (detail)
-    const viewOrderDetail = async (order) => {
-        setSelectedOrder(order);
-        setLinesLoading(true);
-        try {
-            if (window.electronAPI && order.lines && order.lines.length > 0) {
-                const result = await window.electronAPI.getPosOrderLines(order.lines);
-                if (result.success) {
-                    setOrderLines(result.lines || []);
-                }
-            } else {
-                await new Promise((r) => setTimeout(r, 300));
-                setOrderLines([
-                    { id: 1, product_id: [1, 'Phở bò'], qty: 2, price_unit: 45000, discount: 0, price_subtotal_incl: 90000 },
-                    { id: 2, product_id: [2, 'Cà phê sữa'], qty: 3, price_unit: 20000, discount: 10, price_subtotal_incl: 54000 },
-                    { id: 3, product_id: [3, 'Bánh flan'], qty: 1, price_unit: 15000, discount: 0, price_subtotal_incl: 15000 },
-                ]);
-            }
-        } catch (err) {
-            setOrderLines([]);
-        } finally {
-            setLinesLoading(false);
-        }
-    };
-
-    const closeHistory = () => {
-        setShowHistory(false);
-        setSelectedOrder(null);
-        setHistoryOrders([]);
-        setOrderLines([]);
-    };
+    // Order history — shared hook
+    const history = useOrderHistory(posConfig?.id);
 
     // Close POS session
     const handleConfirmCloseSession = async () => {
@@ -356,9 +271,28 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
 
             {/* Toolbar */}
             <div className="table-toolbar">
-                <button className="btn btn-purple" onClick={openMergePopup}>🔗 Gộp bàn</button>
-                <button className="btn btn-warning" onClick={openSplitPopup}>✂️ Tách bàn</button>
-                <button className="btn btn-secondary" onClick={openHistory}>📋 Lịch sử đơn hàng</button>
+                <div className="table-toolbar-left">
+                    <button className="btn btn-purple" onClick={openMergePopup}>🔗 Gộp bàn</button>
+                    <button className="btn btn-warning" onClick={openSplitPopup}>✂️ Tách bàn</button>
+                    <button className="btn btn-secondary" onClick={history.openHistory}>📋 Lịch sử đơn hàng</button>
+                    <button className="btn btn-secondary" onClick={onGoToManagement}>📊 Quản lý</button>
+                </div>
+                <div className="table-mode-toggle">
+                    <button
+                        className={`table-mode-btn ${posMode === 'restaurant' ? 'table-mode-btn-active' : ''}`}
+                        onClick={() => onToggleMode('restaurant')}
+                        title="Chế độ nhà hàng"
+                    >
+                        🍽️ Nhà hàng
+                    </button>
+                    <button
+                        className={`table-mode-btn ${posMode === 'retail' ? 'table-mode-btn-active' : ''}`}
+                        onClick={() => onToggleMode('retail')}
+                        title="Chế độ bán lẻ"
+                    >
+                        🛒 Bán lẻ
+                    </button>
+                </div>
             </div>
 
             {/* Table Grid */}
@@ -437,212 +371,20 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                 </div>
             )}
 
-            {/* ===== POPUP: Order History ===== */}
-            {showHistory && (
-                <div className="popup-overlay" onClick={closeHistory}>
-                    <div className="history-popup glass-card slide-up" onClick={(e) => e.stopPropagation()}>
-                        <div className="history-header">
-                            <div className="history-header-left">
-                                {selectedOrder && (
-                                    <button className="btn btn-secondary history-back-btn" onClick={() => setSelectedOrder(null)}>
-                                        ← Danh sách
-                                    </button>
-                                )}
-                                <h2 className="history-title">
-                                    {selectedOrder ? `Chi tiết — ${selectedOrder.name || selectedOrder.pos_reference}` : '📋 Lịch sử đơn hàng (7 ngày)'}
-                                </h2>
-                            </div>
-                            <button className="history-close" onClick={closeHistory}>✕</button>
-                        </div>
-
-                        <div className="history-body">
-                            {historyLoading ? (
-                                <div className="history-loading">
-                                    <span className="login-spinner"></span>
-                                    <p>Đang tải đơn hàng...</p>
-                                </div>
-                            ) : historyError ? (
-                                <div className="history-error">
-                                    <p>⚠️ {historyError}</p>
-                                </div>
-                            ) : !selectedOrder ? (
-                                historyOrders.length === 0 ? (
-                                    <div className="history-empty">
-                                        <p>📭 Chưa có đơn hàng nào trong 7 ngày qua</p>
-                                    </div>
-                                ) : (
-                                    <div className="history-table">
-                                        <div className="history-table-header">
-                                            <span className="history-col history-col-ref">Mã đơn</span>
-                                            <span className="history-col history-col-date">Ngày</span>
-                                            <span className="history-col history-col-customer">Khách hàng</span>
-                                            <span className="history-col history-col-total">Tổng tiền</span>
-                                            <span className="history-col history-col-state">Trạng thái</span>
-                                        </div>
-                                        {historyOrders.map((order) => (
-                                            <div
-                                                key={order.id}
-                                                className="history-table-row"
-                                                onClick={() => viewOrderDetail(order)}
-                                            >
-                                                <span className="history-col history-col-ref">{order.pos_reference || order.name}</span>
-                                                <span className="history-col history-col-date">{formatDate(order.date_order)}</span>
-                                                <span className="history-col history-col-customer">
-                                                    {order.partner_id ? (Array.isArray(order.partner_id) ? order.partner_id[1] : order.partner_id) : 'Khách vãng lai'}
-                                                </span>
-                                                <span className="history-col history-col-total">{formatPrice(order.amount_total)}</span>
-                                                <span className={`history-col history-col-state ${getStateClass(order.state)}`}>
-                                                    {getStateLabel(order.state)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )
-                            ) : (
-                                <div className="history-detail">
-                                    <div className="history-detail-info">
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '15px' }}>
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() => {
-                                                    const printWindow = window.open('', '_blank');
-                                                    printWindow.document.write(`
-                                                        <html>
-                                                        <head>
-                                                            <title>In Bill Cũ</title>
-                                                            <style>
-                                                                body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; color: #000; }
-                                                                h2 { text-align: center; margin-bottom: 5px; font-size: 1.2rem; }
-                                                                p { text-align: center; margin: 2px 0; font-size: 0.9rem; }
-                                                                .info { text-align: left; }
-                                                                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-                                                                th, td { text-align: left; padding: 4px 0; border-bottom: 1px dashed #ccc; }
-                                                                th:last-child, td:last-child { text-align: right; }
-                                                                th:nth-child(2), td:nth-child(2) { text-align: center; }
-                                                                .totals { margin-top: 15px; font-size: 0.9rem; }
-                                                                .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-                                                                .grand-total { font-size: 1.2rem; font-weight: bold; margin-top: 10px; border-top: 2px dashed #000; padding-top: 10px; }
-                                                                @media print {
-                                                                    .no-print { display: none; }
-                                                                }
-                                                            </style>
-                                                        </head>
-                                                        <body>
-                                                            <h2>${posConfig?.name || 'HotPOS'}</h2>
-                                                            <p>HÓA ĐƠN BÁN HÀNG (IN LẠI)</p>
-                                                            <div class="info">
-                                                                <p>Mã đơn: ${selectedOrder.pos_reference || selectedOrder.name}</p>
-                                                                <p>Ngày: ${new Date(selectedOrder.date_order).toLocaleString('vi-VN')}</p>
-                                                                <p>KH: ${selectedOrder.partner_id ? (Array.isArray(selectedOrder.partner_id) ? selectedOrder.partner_id[1] : selectedOrder.partner_id) : 'Khách vãng lai'}</p>
-                                                            </div>
-                                                            <table>
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Món</th>
-                                                                        <th>SL</th>
-                                                                        <th>T.Tiền</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    ${orderLines.map(line => `
-                                                                        <tr>
-                                                                            <td>${Array.isArray(line.product_id) ? line.product_id[1] : line.product_id}</td>
-                                                                            <td>${line.qty}</td>
-                                                                            <td>${new Intl.NumberFormat('vi-VN').format(Math.round(line.price_subtotal_incl))}đ</td>
-                                                                        </tr>
-                                                                    `).join('')}
-                                                                </tbody>
-                                                            </table>
-                                                            <div class="totals">
-                                                                <div class="total-row grand-total">
-                                                                    <span>TỔNG CỘNG</span>
-                                                                    <span>${new Intl.NumberFormat('vi-VN').format(Math.round(selectedOrder.amount_total))}đ</span>
-                                                                </div>
-                                                            </div>
-                                                            <div class="no-print" style="margin-top: 20px; text-align: center;">
-                                                                <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer;">IN HÓA ĐƠN</button>
-                                                            </div>
-                                                            <script>
-                                                                setTimeout(() => window.print(), 500);
-                                                            </script>
-                                                        </body>
-                                                        </html>
-                                                    `);
-                                                    printWindow.document.close();
-                                                }}
-                                            >
-                                                🖨️ In lại bill
-                                            </button>
-                                            <button
-                                                className="btn btn-warning"
-                                                onClick={() => {
-                                                    // Placeholder cho chức năng trả hàng
-                                                    alert("Chức năng trả hàng sẽ được thêm vào sau.");
-                                                }}
-                                            >
-                                                ↩️ Trả hàng
-                                            </button>
-                                        </div>
-                                        <div className="history-detail-row">
-                                            <span className="history-detail-label">Mã đơn</span>
-                                            <span className="history-detail-value">{selectedOrder.pos_reference || selectedOrder.name}</span>
-                                        </div>
-                                        <div className="history-detail-row">
-                                            <span className="history-detail-label">Ngày</span>
-                                            <span className="history-detail-value">{formatDate(selectedOrder.date_order)}</span>
-                                        </div>
-                                        <div className="history-detail-row">
-                                            <span className="history-detail-label">Khách hàng</span>
-                                            <span className="history-detail-value">
-                                                {selectedOrder.partner_id ? (Array.isArray(selectedOrder.partner_id) ? selectedOrder.partner_id[1] : selectedOrder.partner_id) : 'Khách vãng lai'}
-                                            </span>
-                                        </div>
-                                        <div className="history-detail-row">
-                                            <span className="history-detail-label">Trạng thái</span>
-                                            <span className={`history-detail-value ${getStateClass(selectedOrder.state)}`}>
-                                                {getStateLabel(selectedOrder.state)}
-                                            </span>
-                                        </div>
-                                        <div className="history-detail-row history-detail-total-row">
-                                            <span className="history-detail-label">Tổng tiền</span>
-                                            <span className="history-detail-value history-detail-total">{formatPrice(selectedOrder.amount_total)}</span>
-                                        </div>
-                                    </div>
-
-                                    <h3 className="history-detail-section-title">Chi tiết sản phẩm</h3>
-                                    {linesLoading ? (
-                                        <div className="history-loading"><span className="login-spinner"></span> Đang tải...</div>
-                                    ) : (
-                                        <div className="history-table">
-                                            <div className="history-table-header">
-                                                <span className="history-col history-col-product">Sản phẩm</span>
-                                                <span className="history-col history-col-qty">SL</span>
-                                                <span className="history-col history-col-price">Đơn giá</span>
-                                                <span className="history-col history-col-disc">CK%</span>
-                                                <span className="history-col history-col-subtotal">Thành tiền</span>
-                                            </div>
-                                            {orderLines.map((line) => (
-                                                <div key={line.id} className="history-table-row history-table-row-detail">
-                                                    <span className="history-col history-col-product">
-                                                        {Array.isArray(line.product_id) ? line.product_id[1] : line.product_id}
-                                                    </span>
-                                                    <span className="history-col history-col-qty">{line.qty}</span>
-                                                    <span className="history-col history-col-price">{formatPrice(line.price_unit)}</span>
-                                                    <span className="history-col history-col-disc">{line.discount > 0 ? `${line.discount}%` : '—'}</span>
-                                                    <span className="history-col history-col-subtotal">{formatPrice(line.price_subtotal_incl)}</span>
-                                                </div>
-                                            ))}
-                                            {orderLines.length === 0 && (
-                                                <div className="history-empty"><p>Không có dữ liệu</p></div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* ===== POPUP: Order History (shared component) ===== */}
+            <OrderHistoryPopup
+                show={history.showHistory}
+                onClose={history.closeHistory}
+                orders={history.historyOrders}
+                loading={history.historyLoading}
+                error={history.historyError}
+                selectedOrder={history.selectedOrder}
+                orderLines={history.orderLines}
+                linesLoading={history.linesLoading}
+                onViewDetail={history.viewOrderDetail}
+                onBackToList={history.backToList}
+                posName={posConfig?.name}
+            />
             {/* Merge Popup */}
             {showMergePopup && (
                 <div className="popup-overlay" onClick={() => setShowMergePopup(false)}>

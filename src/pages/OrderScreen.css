@@ -758,6 +758,49 @@
     color: var(--accent-primary) !important;
 }
 
+/* ===== Mode Toggle ===== */
+.order-mode-toggle {
+    display: flex;
+    border: 1px solid var(--border-glass);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.5);
+    flex-shrink: 0;
+}
+
+.order-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.order-mode-btn:first-child {
+    border-right: 1px solid var(--border-glass);
+}
+
+.order-mode-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.order-mode-btn-active {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.15)) !important;
+    color: var(--accent-primary) !important;
+    font-weight: 700;
+    box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.1);
+}
+
 /* ===== Popup Overlay ===== */
 .order-popup-overlay {
     position: fixed;
@@ -1772,4 +1815,135 @@
     font-size: 10px;
     color: #9ca3af;
     text-align: right;
+}
+
+/* ===== Retail Mode: Header Buttons ===== */
+.order-header-btn {
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+}
+
+/* ===== Retail Mode: Order History Popup ===== */
+.retail-history-popup {
+    width: 90vw;
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.97) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-lg);
+    text-align: left;
+    padding: 0;
+}
+
+.retail-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.retail-history-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.retail-history-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.retail-history-table {
+    width: 100%;
+}
+
+.retail-history-table-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.8);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.retail-history-table-header .rh-col {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.retail-history-table-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.retail-history-table-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.rh-col {
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rh-col-ref {
+    flex: 2;
+    min-width: 0;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.rh-col-date {
+    flex: 1.5;
+    min-width: 0;
+}
+
+.rh-col-customer {
+    flex: 1.5;
+    min-width: 0;
+}
+
+.rh-col-total {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.rh-col-state {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+/* State badges (shared with TablePage history) */
+.history-state-paid {
+    color: var(--accent-primary) !important;
+}
+
+.history-state-draft {
+    color: var(--accent-warning) !important;
+}
+
+.history-state-cancel {
+    color: #ef4444 !important;
 }

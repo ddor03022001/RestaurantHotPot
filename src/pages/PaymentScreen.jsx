@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { formatPrice } from '../utils/formatters';
 import './PaymentScreen.css';
 
 const JOURNAL_ICONS = {
@@ -9,7 +10,8 @@ const JOURNAL_ICONS = {
     purchase: '📭',
 };
 
-function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete }) {
+function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete, posMode }) {
+    const isRetail = posMode === 'retail';
     const orderItems = table.orderItems || [];
     const billDiscount = table.billDiscount || { type: 'percent', value: 0 };
     const selectedCustomer = table.selectedCustomer || null;
@@ -175,9 +177,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         setActivePaymentIdx(null);
     };
 
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN').format(Math.round(price)) + 'đ';
-    };
+
 
     const [showPayConfirm, setShowPayConfirm] = useState(false);
 
@@ -362,7 +362,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     <div className="payment-success-icon">✅</div>
                     <h1 className="payment-success-title">Thanh toán thành công!</h1>
                     <p className="payment-success-detail">
-                        Bàn {table.number} • {formatPrice(orderTotal)}
+                        {isRetail ? '' : `Bàn ${table.number} • `}{formatPrice(orderTotal)}
                     </p>
                     {selectedCustomer && (
                         <p className="payment-success-customer">Khách hàng: {selectedCustomer.name}</p>
@@ -374,7 +374,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         <p className="payment-success-method">Tiền thừa: {formatPrice(changeAmount)}</p>
                     )}
                     <button className="btn btn-primary payment-done-btn" onClick={handleDone}>
-                        ✅ Hoàn tất — Về danh sách bàn
+                        ✅ Hoàn tất {isRetail ? '— Đơn hàng mới' : '— Về danh sách bàn'}
                     </button>
                 </div>
             </div>
@@ -416,7 +416,9 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         ← Quay lại đơn hàng
                     </button>
                     <div className="payment-header-info">
-                        <h1 className="payment-header-title">Thanh toán — Bàn {table.number}</h1>
+                        <h1 className="payment-header-title">
+                            {isRetail ? 'Thanh toán' : `Thanh toán — Bàn ${table.number}`}
+                        </h1>
                         <p className="payment-header-meta">{posConfig.name} • {authData.user.name}</p>
                     </div>
                 </div>
@@ -719,7 +721,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             <div className="receipt-header">
                                 <h2 className="receipt-shop-name">{posConfig?.name || 'HotPOS'}</h2>
                                 <p className="receipt-sub">BILL TẠM TÍNH</p>
-                                <p className="receipt-info">Bàn {table.number}</p>
+                                <p className="receipt-info">{isRetail ? 'Bán lẻ' : `Bàn ${table.number}`}</p>
                                 <p className="receipt-info">{new Date().toLocaleString('vi-VN')}</p>
                                 {selectedCustomer && (
                                     <p className="receipt-info">KH: {selectedCustomer.name}</p>

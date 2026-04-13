@@ -220,10 +220,10 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
         if (serviceProductIds.has(prodId)) continue;
         const prodName = Array.isArray(line.product_id) ? line.product_id[1] : (line.product_id || 'Không rõ');
         if (!productAgg[prodName]) productAgg[prodName] = { name: prodName, qty: 0, revenue: 0 };
-        productAgg[prodName].qty += line.qty || 0;
+        productAgg[prodName].qty = Math.round(((productAgg[prodName].qty || 0) + (Number(line.qty) || 0)) * 100) / 100;
         productAgg[prodName].revenue += line.price_subtotal_incl || 0;
     }
-    const topProducts = Object.values(productAgg).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
+    const topProducts = Object.values(productAgg).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
     const maxProductRevenue = topProducts.length > 0 ? topProducts[0].revenue : 1;
 
     // Recent orders (last 10)

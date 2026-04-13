@@ -539,9 +539,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             {/* Header */}
             <header className="order-header">
                 <div className="order-header-left">
-                    <button className="btn btn-secondary order-back-btn" onClick={onBack}>
+                    {/* <button className="btn btn-secondary order-back-btn" onClick={onBack}>
                         {isRetail ? '← Chọn POS' : '← Bàn'}
-                    </button>
+                    </button> */}
                     <div className="order-header-info">
                         <h1 className="order-header-title">
                             {isRetail ? (

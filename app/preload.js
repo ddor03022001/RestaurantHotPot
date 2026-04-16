@@ -68,4 +68,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Get stock products
     getStockProducts: (product_ids, location_ids) =>
         ipcRenderer.invoke('odoo:getStockProducts', product_ids, location_ids),
+
+    // Get tables
+    getTables: (configId) =>
+        ipcRenderer.invoke('odoo:getTables', configId),
+
+    // Customer Display
+    toggleCustomerDisplay: (show) => ipcRenderer.invoke('window:toggleCustomerDisplay', show),
+    sendToCustomerDisplay: (data) => ipcRenderer.invoke('window:sendToCustomerDisplay', data),
+    onCustomerDisplayUpdate: (callback) => {
+        // Remove previous listeners if any to avoid duplicates
+        ipcRenderer.removeAllListeners('customer-display-update');
+        ipcRenderer.on('customer-display-update', (event, data) => callback(data));
+    },
 });

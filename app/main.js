@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const OdooService = require('./odooService');
 
 let mainWindow;
+let customerWindow = null;
 let odooSession = null; // { url, db, uid, password, user }
 
 function createWindow() {
@@ -32,6 +33,54 @@ function createWindow() {
     // Maximize and show the window
     mainWindow.maximize();
     mainWindow.show();
+}
+
+function createCustomerWindow() {
+    if (customerWindow) return;
+
+    const displays = screen.getAllDisplays();
+    const externalDisplay = displays.find((display) => {
+        return display.bounds.x !== 0 || display.bounds.y !== 0;
+    });
+
+    const windowOptions = {
+        title: 'Customer Display',
+        show: false,
+        autoHideMenuBar: true,
+        alwaysOnTop: false,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+    };
+
+    if (externalDisplay) {
+        windowOptions.x = externalDisplay.bounds.x;
+        windowOptions.y = externalDisplay.bounds.y;
+        windowOptions.fullscreen = true;
+    } else {
+        // Fallback to primary display if only 1 screen
+        windowOptions.width = 1024;
+        windowOptions.height = 768;
+    }
+
+    customerWindow = new BrowserWindow(windowOptions);
+
+    if (!app.isPackaged) {
+        customerWindow.loadURL('http://localhost:5173/#/customer-display');
+    } else {
+        customerWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'customer-display' });
+    }
+
+    if (externalDisplay) {
+        customerWindow.maximize();
+    }
+    customerWindow.show();
+
+    customerWindow.on('closed', () => {
+        customerWindow = null;
+    });
 }
 
 // ========== IPC Handlers ==========
@@ -184,6 +233,17 @@ ipcMain.handle('odoo:getStockProducts', async (event, product_ids, location_ids)
     }
 });
 
+ipcMain.handle('odoo:getTables', async (event, configId) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const result = await OdooService.getTables(url, db, uid, password, configId);
+        return { success: true, result };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('odoo:executeKw', async (event, model, method, args, kwargs) => {
     if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
     try {
@@ -240,6 +300,26 @@ ipcMain.handle('odoo:createProductionOrder', async (event, productId, quantity, 
     } catch (error) {
         return { success: false, error: error.message };
     }
+});
+
+// ========== Customer Display IPC ==========
+ipcMain.handle('window:toggleCustomerDisplay', (event, show) => {
+    if (show) {
+        createCustomerWindow();
+    } else {
+        if (customerWindow) {
+            customerWindow.close();
+            customerWindow = null;
+        }
+    }
+    return true;
+});
+
+ipcMain.handle('window:sendToCustomerDisplay', (event, data) => {
+    if (customerWindow) {
+        customerWindow.webContents.send('customer-display-update', data);
+    }
+    return true;
 });
 
 // ========== App Lifecycle ==========

@@ -75,7 +75,7 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
 
             // Load products, customers, categories, pricelists, promotions
             setLoadingMessage('Đang tải sản phẩm...');
-            let products = [], customers = [], categories = [], pricelists = [], promotions = [], paymentJournals = [];
+            let products = [], customers = [], categories = [], pricelists = [], promotions = [], paymentJournals = [], tables = [];
 
             if (window.electronAPI) {
                 const [prodResult, custResult, catResult, plResult, promoResult, journalResult] = await Promise.all([
@@ -92,7 +92,9 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                 pricelists = plResult.success ? plResult.pricelists : [];
                 promotions = promoResult.success ? promoResult.promotions : [];
                 paymentJournals = journalResult.success ? journalResult.journals : [];
-                const stockProducts = await window.electronAPI.getStockProducts(products.map(p => p.id), [config.stock_location_id[0]]);
+                // const stockProducts = await window.electronAPI.getStockProducts(products.map(p => p.id), [config.stock_location_id[0]]);
+                const resultTable = await window.electronAPI.getTables(config.id);
+                tables = resultTable.success ? resultTable.result : [];
             } else {
                 // Browser mock data
                 await new Promise((r) => setTimeout(r, 600));
@@ -141,7 +143,7 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
             setLoadingMessage('');
             onSelectPos(
                 { ...config, session },
-                { products, customers, categories, pricelists, promotions, paymentJournals, defaultPricelistId: config.pricelist_id ? config.pricelist_id[0] : null }
+                { products, customers, categories, pricelists, promotions, paymentJournals, tables, defaultPricelistId: config.pricelist_id ? config.pricelist_id[0] : null }
             );
         } catch (err) {
             setError(err.message);

@@ -6,6 +6,7 @@ import TablePage from './pages/TablePage';
 import OrderScreen from './pages/OrderScreen';
 import PaymentScreen from './pages/PaymentScreen';
 import ManagementScreen from './pages/ManagementScreen';
+import CustomerScreen from './pages/CustomerScreen';
 
 // Initialize 16 fixed tables
 const createInitialTables = () => {
@@ -20,6 +21,23 @@ const createInitialTables = () => {
         orderItems: [], // [{ product, quantity }]
     }));
 };
+
+const createInitialTablesData = (data) => {
+    let tables = [];
+    for (let i = 0; i < data.length; i++) {
+        tables.push({
+            id: data[i].id,
+            number: data[i].name,
+            status: 'available',
+            mergedWith: null,
+            mergedTables: [],
+            guestCount: 0,
+            orderTime: null,
+            orderItems: [],
+        })
+    }
+    return tables;
+}
 
 // Virtual counter table for retail mode
 const createRetailCounter = () => ({
@@ -67,7 +85,12 @@ function App() {
     const handleSelectPos = (config, data) => {
         setPosConfig(config);
         setPosData(data);
-        setTables(createInitialTables());
+        if (data.tables && data.tables.length > 0) {
+            const tables = createInitialTablesData(data.tables);
+            setTables(tables);
+        } else {
+            setTables(createInitialTables());
+        }
         if (posMode === 'retail') {
             // Go directly to order screen with a virtual counter
             setActiveTableId(0);
@@ -285,6 +308,7 @@ function App() {
     return (
         <HashRouter>
             <Routes>
+                <Route path="/customer-display" element={<CustomerScreen />} />
                 <Route path="/" element={renderCurrentScreen()} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -150,6 +150,25 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const remaining = Math.max(0, orderTotal - totalPaid);
     const changeAmount = Math.max(0, totalPaid - orderTotal);
 
+    React.useEffect(() => {
+        if (window.electronAPI && window.electronAPI.sendToCustomerDisplay) {
+            window.electronAPI.sendToCustomerDisplay({
+                screen: 'payment',
+                items: orderItems.map(item => ({
+                    id: item.product.id,
+                    name: item.product.display_name || item.product.name,
+                    price: getProductPrice(item.product),
+                    quantity: item.quantity
+                })),
+                totalData: {
+                    subTotal: rawTotal,
+                    tax: 0,
+                    total: orderTotal
+                }
+            });
+        }
+    }, [orderItems, rawTotal, orderTotal]);
+
     const addPaymentLine = (journal) => {
         // Check if journal already added
         const existIdx = paymentLines.findIndex(pl => pl.journalId === journal.id);
@@ -329,6 +348,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     statement_ids: statementIds,
                     ecommerce_code: ecommerceCode,
                     note: note,
+                    table_id: table.id,
                     currency_id: posConfig.currency_id[0],
                     uid: uidId,
                     user_id: authData.user.uid

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import OrderHistoryPopup from '../components/OrderHistoryPopup';
 import { formatPrice, formatDate, getStateLabel, getStateClass } from '../utils/formatters';
 import { useOrderHistory } from '../hooks/useOrderHistory';
@@ -57,6 +57,15 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [showCloseSessionPopup, setShowCloseSessionPopup] = useState(false);
     const [closingSession, setClosingSession] = useState(false);
     const [closeSessionError, setCloseSessionError] = useState('');
+
+    const [customerDisplayOn, setCustomerDisplayOn] = useState(false);
+    const toggleCustomerDisplay = () => {
+        const newState = !customerDisplayOn;
+        if (window.electronAPI && window.electronAPI.toggleCustomerDisplay) {
+            window.electronAPI.toggleCustomerDisplay(newState);
+            setCustomerDisplayOn(newState);
+        }
+    };
 
     const openProduction = (prod) => {
         setSelectedProduction(prod);
@@ -534,6 +543,27 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         }
     };
 
+    // Update customer display whenever order items change
+    useEffect(() => {
+        if (window.electronAPI && window.electronAPI.sendToCustomerDisplay) {
+            // Delay slightly to ensure formatting is correct if needed, but synchronous is fine
+            window.electronAPI.sendToCustomerDisplay({
+                screen: 'order',
+                items: orderItems.map(item => ({
+                    id: item.product.id,
+                    name: item.product.display_name || item.product.name,
+                    price: getProductPrice(item.product),
+                    quantity: item.quantity
+                })),
+                totalData: {
+                    subTotal: subtotal,
+                    tax: 0, // update with real tax if available
+                    total: orderTotal
+                }
+            });
+        }
+    }, [orderItems, subtotal, orderTotal]);
+
     return (
         <div className="order-screen">
             {/* Header */}
@@ -621,6 +651,13 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         disabled={orderItems.length === 0}
                     >
                         🏷️ In tem
+                    </button>
+
+                    <button
+                        className={`order-toolbar-btn ${customerDisplayOn ? 'order-toolbar-btn-active' : ''}`}
+                        onClick={toggleCustomerDisplay}
+                    >
+                        🖥️ Khách hàng
                     </button>
                 </div>
 
@@ -1440,8 +1477,8 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                         labels.push(
                                             <div key={`${item.lineId}-${i}`} className="product-label">
                                                 <div className="label-left">
-                                                    <img src={item.product.image_medium ? `data:image/png;base64,${item.product.image_medium}` : "/logo.png"} alt="Logo" className="label-logo" />
-                                                    <div className="label-table-info">Bàn {table.number}</div>
+                                                    <img src={item.product.image_medium ? `data:image/png;base64,${item.product.image_medium}` : "./logo.png"} alt="Logo" className="label-logo" />
+                                                    {/* <div className="label-table-info">Bàn {table.number}</div> */}
                                                 </div>
                                                 <div className="label-right">
                                                     <div className="label-product-name">
@@ -1454,7 +1491,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                                     {item.note && item.note.trim() && (
                                                         <div className="label-note">📝 {item.note}</div>
                                                     )}
-                                                    <div className="label-date">{new Date().toLocaleDateString('vi-VN')}</div>
+                                                    <div className="label-date">{new Date().toLocaleString('vi-VN')}</div>
                                                 </div>
                                             </div>
                                         );

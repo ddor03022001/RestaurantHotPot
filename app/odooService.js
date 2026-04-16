@@ -500,6 +500,31 @@ class OdooService {
     }
 
     /**
+     * Get Tables
+     */
+    static async getTables(url, db, uid, password, configId) {
+        const Floors = await OdooService._execute(url, db, uid, password, 'restaurant.floor', 'search_read',
+            [[['pos_config_id', '=', configId]]],
+            {
+                fields: ['id', 'name', 'table_ids'],
+            }
+        );
+
+        // taxes
+        const allTables = [];
+        for (const p of Floors) {
+            if (p.table_ids && p.table_ids.length > 0) {
+                allTables.push(...p.table_ids);
+            }
+        }
+        const tables = await OdooService._execute(url, db, uid, password, 'restaurant.table', 'search_read',
+            [[['id', 'in', allTables]]],
+            { fields: ['id', 'name', 'seats'] }
+        );
+        return tables;
+    }
+
+    /**
      * Internal: execute_kw wrapper
      */
     static _execute(url, db, uid, password, model, method, args, kwargs = {}) {

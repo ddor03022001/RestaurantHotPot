@@ -1,0 +1,117 @@
+import React, { useState, useEffect } from 'react';
+import './CustomerScreen.css';
+import { formatPrice } from '../utils/formatters';
+
+const CustomerScreen = () => {
+    const [displayState, setDisplayState] = useState({
+        screen: 'idle', // 'idle' | 'order' | 'payment'
+        items: [],
+        totalData: {
+            subTotal: 0,
+            tax: 0,
+            total: 0
+        }
+    });
+
+    useEffect(() => {
+        if (window.electronAPI && window.electronAPI.onCustomerDisplayUpdate) {
+            window.electronAPI.onCustomerDisplayUpdate((data) => {
+                // console.log('Customer update received:', data);
+                setDisplayState((prev) => ({ ...prev, ...data }));
+            });
+        }
+    }, []);
+
+    const { screen, items, totalData } = displayState;
+
+    return (
+        <div className="customer-screen-container">
+            {/* Left Promotional Panel */}
+            <div className="customer-screen-left">
+                <h1 className="brand-title">Welcome to DannyGreen Retail</h1>
+                <p className="brand-subtitle"></p>
+                {/* You can replace this img with an actual promotional video or carousel */}
+                <video
+                    autoPlay    // Tự động chạy
+                    loop        // Lặp lại liên tục
+                    muted       // Tắt tiếng (Bắt buộc phải có muted thì trình duyệt mới cho autoPlay)
+                    playsInline // Chạy trực tiếp trên trang (quan trọng cho các thiết bị di động)
+                    style={{
+                        width: '60%',
+                        height: '500px',
+                        objectFit: 'cover', // Cắt xén khéo léo để video lấp đầy khung mà không bị méo
+                        marginTop: '2rem',
+                        borderRadius: '20px',
+                        border: '1px solid #334155',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}
+                >
+                    {/* Thay đường dẫn này bằng link video của bạn */}
+                    <source src="./video.mp4" type="video/mp4" />
+
+                    {/* Dòng chữ này sẽ hiện ra nếu trình duyệt hoặc màn hình POS quá cũ không hỗ trợ video */}
+                    Trình duyệt của bạn không hỗ trợ phát video.
+                </video>
+            </div>
+
+            {/* Right Receipt Panel */}
+            <div className="customer-screen-right">
+                <div className="cart-header">
+                    <h2>Đơn hàng của bạn</h2>
+                </div>
+
+                <div className="cart-body">
+                    {!items || items.length === 0 ? (
+                        <div className="idle-state">
+                            <span style={{ fontSize: '48px', marginBottom: '1rem' }}>🛒</span>
+                            <h3>Xin chào quý khách!</h3>
+                            <p>Đơn hàng sẽ hiển thị tại đây khi bắt đầu gọi món.</p>
+                        </div>
+                    ) : (
+                        items.map((item, index) => (
+                            <div key={index} className="cart-item">
+                                <div className="item-info">
+                                    <div className="item-name">{item.name}</div>
+                                    <div className="item-qty-price">{item.quantity} x {formatPrice(item.price)}</div>
+                                </div>
+                                <div className="item-total">
+                                    {formatPrice(item.quantity * item.price)}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {items && items.length > 0 && (
+                    <div className="cart-footer">
+                        <div className="summary-row">
+                            <span>Tạm tính</span>
+                            <span>{formatPrice(totalData.subTotal)}</span>
+                        </div>
+                        <div className="summary-row">
+                            <span>Thuế / Phí</span>
+                            <span>{formatPrice(totalData.tax)}</span>
+                        </div>
+                        <div className="summary-row total">
+                            <span>Tổng cộng</span>
+                            <span>{formatPrice(totalData.total)}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Payment Overlay */}
+            {screen === 'payment' && (
+                <div className="payment-overlay">
+                    <h2>Vui lòng nhận thanh toán</h2>
+                    <div className="payment-total">{formatPrice(totalData.total)}</div>
+                    <div className="payment-instructions">
+                        Quý khách vui lòng thanh toán tại quầy
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default CustomerScreen;

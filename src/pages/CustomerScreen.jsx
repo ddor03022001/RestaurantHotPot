@@ -68,17 +68,27 @@ const CustomerScreen = () => {
                             <p>Đơn hàng sẽ hiển thị tại đây khi bắt đầu gọi món.</p>
                         </div>
                     ) : (
-                        items.map((item, index) => (
-                            <div key={index} className="cart-item">
-                                <div className="item-info">
-                                    <div className="item-name">{item.name}</div>
-                                    <div className="item-qty-price">{item.quantity} x {formatPrice(item.price)}</div>
+                        items.map((item, index) => {
+                            const hasDiscount = item.discountAmount > 0;
+                            const originalLineTotal = item.quantity * item.price;
+
+                            return (
+                                <div key={index} className={`cart-item ${hasDiscount ? 'has-discount' : ''}`}>
+                                    <div className="item-info">
+                                        <div className="item-name">{item.name}</div>
+                                        <div className="item-qty-price">{item.quantity} x {formatPrice(item.price)}</div>
+                                    </div>
+                                    <div className="item-total">
+                                        {hasDiscount && (
+                                            <span className="item-original-total">{formatPrice(originalLineTotal)}</span>
+                                        )}
+                                        <span className={hasDiscount ? 'item-discounted-total' : ''}>
+                                            {formatPrice(item.lineTotal || originalLineTotal)}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="item-total">
-                                    {formatPrice(item.quantity * item.price)}
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 
@@ -88,9 +98,15 @@ const CustomerScreen = () => {
                             <span>Tạm tính</span>
                             <span>{formatPrice(totalData.subTotal)}</span>
                         </div>
+                        {totalData.totalDiscount > 0 && (
+                            <div className="summary-row discount">
+                                <span>Chiết khấu</span>
+                                <span>-{formatPrice(totalData.totalDiscount)}</span>
+                            </div>
+                        )}
                         <div className="summary-row">
                             <span>Thuế / Phí</span>
-                            <span>{formatPrice(totalData.tax)}</span>
+                            <span>{formatPrice(totalData.tax || 0)}</span>
                         </div>
                         <div className="summary-row total">
                             <span>Tổng cộng</span>

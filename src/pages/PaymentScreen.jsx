@@ -10,7 +10,7 @@ const JOURNAL_ICONS = {
     purchase: '📭',
 };
 
-function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete, posMode }) {
+function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete, posMode, onRefreshStock }) {
     const isRetail = posMode === 'retail';
     const orderItems = table.orderItems || [];
     const billDiscount = table.billDiscount || { type: 'percent', value: 0 };
@@ -323,7 +323,14 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             // const tzoffset = 420 * 60000;
             const localISOTime = (new Date(Date.now())).toISOString().slice(0, 19).replace('T', ' ');
 
-            const uidId = Math.random().toString(36).substr(2, 9);
+            const now = new Date();
+
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const second = String(now.getSeconds()).padStart(2, '0');
+
+            const timeString = `${hour}${minutes}${second}`;
+            const uidId = `${timeString}-${posConfig.session.id}-${authData.user.uid}`;
 
             const amount_total = lines.reduce((sum, line) => sum + line[2].price_subtotal_incl, 0);
             const amount_paid = amount_total;
@@ -372,6 +379,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     };
 
     const handleDone = () => {
+        if (onRefreshStock) onRefreshStock();
         onComplete();
     };
 

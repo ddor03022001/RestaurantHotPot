@@ -92,7 +92,21 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                 pricelists = plResult.success ? plResult.pricelists : [];
                 promotions = promoResult.success ? promoResult.promotions : [];
                 paymentJournals = journalResult.success ? journalResult.journals : [];
-                // const stockProducts = await window.electronAPI.getStockProducts(products.map(p => p.id), [config.stock_location_id[0]]);
+                const storableProducts = products.filter(p => p.type === 'product');
+                if (storableProducts.length > 0) {
+                    const stockResult = await window.electronAPI.getStockProducts(storableProducts.map(p => p.id), [config.stock_location_id[0]]);
+                    if (stockResult.success && Array.isArray(stockResult.result)) {
+                        const stockMap = {};
+                        stockResult.result.forEach(s => {
+                            const id = Array.isArray(s.product_id) ? s.product_id[0] : s.product_id;
+                            stockMap[id] = s.quantity;
+                        });
+                        products = products.map(p => ({
+                            ...p,
+                            qty_available: p.type === 'product' ? (stockMap[p.id] || 0) : undefined
+                        }));
+                    }
+                }
                 const resultTable = await window.electronAPI.getTables(config.id);
                 tables = resultTable.success ? resultTable.result : [];
             } else {

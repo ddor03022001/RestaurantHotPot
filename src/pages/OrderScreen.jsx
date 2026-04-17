@@ -22,7 +22,7 @@ function PopupOverlay({ show, onClose, title, className, children }) {
     );
 }
 
-function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment, posMode, onToggleMode, onCloseSession, onGoToManagement }) {
+function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment, posMode, onToggleMode, onCloseSession, onGoToManagement, onRefreshStock }) {
     const isRetail = posMode === 'retail';
     const { products = [], categories = [], customers = [], pricelists = [], promotions = [], defaultPricelistId = null } = posData || {};
     const [orderItems, setOrderItems] = useState(table.orderItems || []);
@@ -264,7 +264,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
     // Filter products
     const filteredProducts = useMemo(() => {
-        let filtered = products;
+        let filtered = products.filter(p => p.qty_available > 0 || p.type !== 'product');
         if (selectedCategory) {
             filtered = filtered.filter((p) => {
                 const catId = p.pos_categ_id ? (Array.isArray(p.pos_categ_id) ? p.pos_categ_id[0] : p.pos_categ_id) : null;
@@ -341,6 +341,17 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
     // Add product to order — always creates a new line
     const addToOrder = (product) => {
+        // Stock Validation
+        if (product.type === 'product') {
+            const currentQtyInCart = orderItems
+                .filter(item => item.product.id === product.id)
+                .reduce((sum, item) => sum + item.quantity, 0);
+
+            if (currentQtyInCart >= (product.qty_available || 0)) {
+                return;
+            }
+        }
+
         // Check if product is a combo
         if (product.is_combo && product.combo_lines && product.combo_lines.length > 0) {
             const comboInfo = {
@@ -361,11 +372,15 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             return;
         }
 
+        const currentQtyInCart = product.type === 'product'
+            ? orderItems.filter(item => item.product.id === product.id).reduce((sum, item) => sum + item.quantity, 0)
+            : 0;
+
         lineIdCounter += 1;
         const newLine = {
             lineId: Date.now() + lineIdCounter,
             product,
-            quantity: 1,
+            quantity: product.type === 'product' ? Math.min(1, (product.qty_available || 0) - currentQtyInCart) : 1,
             discount: { type: 'percent', value: 0 },
             note: '',
         };
@@ -451,26 +466,52 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     };
 
     const updateQuantity = (lineId, delta) => {
+        const itemToUpdate = orderItems.find(i => i.lineId === lineId);
+        if (!itemToUpdate) return;
+
+        // Stock Validation for increase
+        if (delta > 0 && itemToUpdate.product.type === 'product') {
+            const currentTotalInCart = orderItems
+                .filter(i => i.product.id === itemToUpdate.product.id)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            if (currentTotalInCart + delta > (itemToUpdate.product.qty_available || 0)) {
+                // Silently cap or do nothing
+                return;
+            }
+        }
+
         const newItems = orderItems
             .map((item) =>
                 item.lineId === lineId
                     ? { ...item, quantity: Math.max(0, parseFloat((item.quantity + delta).toFixed(3))) }
                     : item
-            )
-            .filter((item) => item.quantity > 0);
+            );
         syncOrderItems(newItems);
     };
 
     const setQuantity = (lineId, value) => {
-        const qty = parseFloat(value);
-        if (isNaN(qty) || qty <= 0) {
-            syncOrderItems(orderItems.filter((item) => item.lineId !== lineId));
-        } else {
-            const newItems = orderItems.map((item) =>
-                item.lineId === lineId ? { ...item, quantity: qty } : item
-            );
-            syncOrderItems(newItems);
+        const itemToUpdate = orderItems.find(i => i.lineId === lineId);
+        if (!itemToUpdate) return;
+
+        // If input is cleared, keep it at 0 to allow user to continue typing
+        let qty = value === "" ? 0 : parseFloat(value);
+        if (isNaN(qty)) qty = 0;
+
+        // Stock Validation
+        if (itemToUpdate.product.type === 'product') {
+            const otherLinesQty = orderItems
+                .filter(i => i.product.id === itemToUpdate.product.id && i.lineId !== lineId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            const maxAvailableForThisLine = Math.max(0, (itemToUpdate.product.qty_available || 0) - otherLinesQty);
+            qty = Math.min(qty, maxAvailableForThisLine);
         }
+
+        const newItems = orderItems.map((item) =>
+            item.lineId === lineId ? { ...item, quantity: qty } : item
+        );
+        syncOrderItems(newItems);
     };
 
     const removeItem = (lineId) => {
@@ -551,13 +592,16 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 screen: 'order',
                 items: orderItems.map(item => ({
                     id: item.product.id,
-                    name: item.product.display_name || item.product.name,
+                    name: (item.isCombo ? "🍱 " : "") + (item.product.display_name || item.product.name),
                     price: getProductPrice(item.product),
-                    quantity: item.quantity
+                    quantity: item.quantity,
+                    discountAmount: getItemDiscountAmount(item),
+                    lineTotal: getItemTotal(item)
                 })),
                 totalData: {
                     subTotal: subtotal,
-                    tax: 0, // update with real tax if available
+                    tax: 0,
+                    totalDiscount: billDiscountAmount,
                     total: orderTotal
                 }
             });
@@ -737,6 +781,11 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                         {product.pos_categ_id && (
                                             <div className="order-product-cat">
                                                 {Array.isArray(product.pos_categ_id) ? product.pos_categ_id[1] : ''}
+                                            </div>
+                                        )}
+                                        {product.type === 'product' && (
+                                            <div className={`order-product-stock ${product.qty_available <= 0 ? 'stock-empty' : ''}`}>
+                                                📦 {product.qty_available || 0}
                                             </div>
                                         )}
                                     </div>
@@ -1448,7 +1497,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                                 .label-date {
                                                     font-size: 5.5pt; color: #aaa; text-align: right;
                                                 }
-                                                @page { size: 50mm 30mm; margin: 0; }
+                                                @page { size: 50mm 30mm landscape; margin: 0; }
                                                 @media print {
                                                     body { margin: 0; }
                                                     .label-grid { gap: 0; padding: 0; }
@@ -1517,6 +1566,8 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 onViewDetail={history.viewOrderDetail}
                 onBackToList={history.backToList}
                 posName={posConfig?.name}
+                authData={authData}
+                posConfig={posConfig}
             />
 
             {/* ===== RETAIL MODE: Close Session Popup ===== */}

@@ -384,6 +384,8 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                 onViewDetail={history.viewOrderDetail}
                 onBackToList={history.backToList}
                 posName={posConfig?.name}
+                authData={authData}
+                posConfig={posConfig}
             />
             {/* Merge Popup */}
             {showMergePopup && (

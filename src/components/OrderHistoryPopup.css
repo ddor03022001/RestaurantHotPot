@@ -207,3 +207,66 @@
 .history-state-cancel {
     color: #ef4444 !important;
 }
+
+/* ===== Return Confirmation Modal ===== */
+.return-confirm-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: var(--radius-lg);
+}
+
+.return-confirm-modal {
+    width: 90%;
+    max-width: 400px;
+    padding: 32px 24px;
+    background: rgba(15, 23, 42, 0.98) !important;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
+}
+
+.return-confirm-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.return-confirm-modal h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.return-confirm-modal p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.return-confirm-modal strong {
+    color: var(--text-primary);
+}
+
+.return-confirm-actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 12px;
+}
+
+.return-confirm-actions .btn {
+    flex: 1;
+}

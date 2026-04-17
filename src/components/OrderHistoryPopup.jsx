@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatPrice, formatDate, getStateLabel, getStateClass, getCustomerName, getProductName } from '../utils/formatters';
 import './OrderHistoryPopup.css';
 
@@ -18,6 +18,8 @@ import './OrderHistoryPopup.css';
  * @param {Function} props.onViewDetail - Called with (order) when clicking a row
  * @param {Function} props.onBackToList - Called to go back from detail to list
  * @param {string} [props.posName] - POS name for print header (optional)
+ * @param {object} [props.authData] - POS name for print header (optional)
+ * @param {object} [props.posConfig] - POS name for print header (optional)
  */
 function OrderHistoryPopup({
     show,
@@ -31,8 +33,120 @@ function OrderHistoryPopup({
     onViewDetail,
     onBackToList,
     posName = 'HotPOS',
+    authData,
+    posConfig,
 }) {
+    const [showReturnConfirm, setShowReturnConfirm] = useState(false);
+    const [processing, setProcessing] = useState(false);
+
     if (!show) return null;
+
+    const handleConfirmReturn = async () => {
+        console.log(posConfig);
+        return;
+        setProcessing(true);
+        try {
+            const statementIds = [];
+            const statement_lines = await window.electronAPI.executeKw(
+                'account.bank.statement.line', 'search_read',
+                [[['id', 'in', selectedOrder.statement_ids]]],
+                { fields: ['id', 'journal_id', 'amount'] }
+            );
+            for (const pl of statement_lines.result) {
+                const stResp = await window.electronAPI.executeKw(
+                    'account.bank.statement', 'search_read',
+                    [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', pl.journal_id[0]]]],
+                    { fields: ['id'], limit: 1 }
+                );
+
+                let statementId = false;
+                if (stResp.success && stResp.result && stResp.result.length > 0) {
+                    statementId = stResp.result[0].id;
+                }
+
+                statementIds.push([0, 0, {
+                    journal_id: pl.journal_id[0],
+                    amount: pl.amount,
+                    name: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    statement_id: statementId
+                }]);
+            }
+
+            let lines = orderLines.map(item => {
+                return [0, 0, {
+                    product_id: item.product_id[0],
+                    qty: -item.qty,
+                    price_unit: parseInt(item.price_unit),
+                    price_subtotal: parseInt(item.price_subtotal),
+                    price_subtotal_incl: parseInt(item.price_subtotal_incl),
+                    // combo_item_ids: combo_item_ids,
+                    discount_type: item.discount_type,
+                    discount: item.discount,
+                    discount_amount: item.discount_amount,
+                    tax_ids: [[6, false, item.tax_ids_after_fiscal_position]],
+                    note: item.note || '',
+                    session_info: {
+                        user: {
+                            id: authData.user.uid,
+                            name: authData.user.name
+                        },
+                        pos: {
+                            id: posConfig.session.id,
+                            name: posConfig.session.name
+                        }
+                    },
+                }];
+            });
+
+            const localISOTime = (new Date(Date.now())).toISOString().slice(0, 19).replace('T', ' ');
+            const now = new Date();
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const second = String(now.getSeconds()).padStart(2, '0');
+
+            const timeString = `${hour}${minutes}${second}`;
+            const uidId = `${timeString}-${posConfig.session.id}-${authData.user.uid}`;
+
+            const orderData = {
+                data: {
+                    name: `Return/Order ${uidId}`,
+                    amount_paid: selectedOrder.amount_paid,
+                    amount_return: 0,
+                    amount_tax: selectedOrder.amount_tax,
+                    amount_total: selectedOrder.amount_total,
+                    creation_date: localISOTime,
+                    fiscal_position_id: false,
+                    lines: lines,
+                    partner_id: selectedOrder.partner_id[0],
+                    pricelist_id: selectedOrder.pricelist_id[0],
+                    pos_session_id: posConfig.session.id,
+                    sequence_number: 1,
+                    statement_ids: statementIds,
+                    ecommerce_code: selectedOrder.ecommerce_code,
+                    note: selectedOrder.note,
+                    table_id: selectedOrder.table_id ? selectedOrder.table_id[0] : false,
+                    currency_id: selectedOrder.currency_id[0],
+                    return_order_id: selectedOrder.id,
+                    is_return: true,
+                    uid: uidId,
+                    user_id: authData.user.uid
+                },
+                id: uidId,
+                to_invoice: true
+            };
+            console.log(orderData);
+            const res = await window.electronAPI.createPosOrder(orderData);
+            if (!res.success) {
+                throw new Error(res.error);
+            }
+        } catch (err) {
+            console.error("Lỗi thanh toán:", err);
+            alert("Lỗi thanh toán: " + err.message);
+        } finally {
+            setProcessing(false);
+            setShowReturnConfirm(false);
+        }
+    };
 
     const handlePrintBill = () => {
         if (!selectedOrder) return;
@@ -145,6 +259,9 @@ function OrderHistoryPopup({
                                 <button className="btn btn-primary" onClick={handlePrintBill}>
                                     🖨️ In lại bill
                                 </button>
+                                <button className="btn btn-danger" onClick={() => setShowReturnConfirm(true)}>
+                                    🔄 Trả hàng
+                                </button>
                             </div>
 
                             {/* Order info grid */}
@@ -185,7 +302,7 @@ function OrderHistoryPopup({
                                         <span className="ht-col" style={{ flex: 3 }}>Sản phẩm</span>
                                         <span className="ht-col" style={{ flex: 0.5, textAlign: 'center' }}>SL</span>
                                         <span className="ht-col" style={{ flex: 1, textAlign: 'right' }}>Đơn giá</span>
-                                        <span className="ht-col" style={{ flex: 0.7, textAlign: 'center' }}>CK%</span>
+                                        <span className="ht-col" style={{ flex: 0.7, textAlign: 'center' }}>CK</span>
                                         <span className="ht-col" style={{ flex: 1, textAlign: 'right' }}>Thành tiền</span>
                                     </div>
                                     {orderLines.map((line) => (
@@ -195,7 +312,7 @@ function OrderHistoryPopup({
                                             </span>
                                             <span className="ht-col" style={{ flex: 0.5, textAlign: 'center' }}>{line.qty}</span>
                                             <span className="ht-col" style={{ flex: 1, textAlign: 'right' }}>{formatPrice(line.price_unit)}</span>
-                                            <span className="ht-col" style={{ flex: 0.7, textAlign: 'center' }}>{line.discount > 0 ? `${line.discount}%` : '—'}</span>
+                                            <span className="ht-col" style={{ flex: 0.7, textAlign: 'center' }}>{line.discount_type === 'percent' ? `${line.discount}%` : `${formatPrice(line.discount_amount)}`}</span>
                                             <span className="ht-col" style={{ flex: 1, textAlign: 'right', fontWeight: 600, color: 'var(--accent-primary)' }}>
                                                 {formatPrice(line.price_subtotal_incl)}
                                             </span>
@@ -210,6 +327,32 @@ function OrderHistoryPopup({
                     )}
                 </div>
             </div>
+
+            {/* Return Confirmation Popup */}
+            {showReturnConfirm && (
+                <div className="return-confirm-overlay">
+                    <div className="return-confirm-modal glass-card fade-in">
+                        <div className="return-confirm-icon">⚠️</div>
+                        <h3>Xác nhận trả hàng?</h3>
+                        <p>Bạn có chắc chắn muốn trả lại đơn hàng <strong>{selectedOrder?.pos_reference || selectedOrder?.name}</strong> không?</p>
+                        <div className="return-confirm-actions">
+                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShowReturnConfirm(false) }}>
+                                Hủy
+                            </button>
+                            <button className="btn btn-danger" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleConfirmReturn() }}>
+                                {processing ? (
+                                    <>
+                                        <span className="login-spinner"></span>
+                                        Đang xử lý...
+                                    </>
+                                ) : (
+                                    <>Xác nhận trả hàng</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

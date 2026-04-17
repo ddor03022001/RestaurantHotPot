@@ -223,6 +223,34 @@ function App() {
         }
     };
 
+    const refreshStock = useCallback(async () => {
+        if (!posConfig || !posData || !window.electronAPI) return;
+        try {
+            const storableProducts = posData.products.filter(p => p.type === 'product');
+            if (storableProducts.length === 0) return;
+
+            const productIds = storableProducts.map(p => p.id);
+            const locationIds = [posConfig.stock_location_id[0]];
+            const stockResult = await window.electronAPI.getStockProducts(productIds, locationIds);
+            if (stockResult.success && Array.isArray(stockResult.result)) {
+                const stockMap = {};
+                stockResult.result.forEach(s => {
+                    const id = Array.isArray(s.product_id) ? s.product_id[0] : s.product_id;
+                    stockMap[id] = s.quantity;
+                });
+                setPosData(prev => ({
+                    ...prev,
+                    products: prev.products.map(p => ({
+                        ...p,
+                        qty_available: p.type === 'product' ? (stockMap[p.id] || 0) : undefined
+                    }))
+                }));
+            }
+        } catch (err) {
+            console.error("Lỗi cập nhật tồn kho:", err);
+        }
+    }, [posConfig, posData]);
+
     // For retail mode, use a stateful virtual counter table (id=0)
     const activeTable = activeTableId === 0
         ? retailCounter
@@ -264,6 +292,7 @@ function App() {
                     onBack={handleBackToOrder}
                     onComplete={handlePaymentComplete}
                     posMode={posMode}
+                    onRefreshStock={refreshStock}
                 />
             );
         }
@@ -283,6 +312,7 @@ function App() {
                     onToggleMode={handleToggleMode}
                     onCloseSession={handleCloseSession}
                     onGoToManagement={handleGoToManagement}
+                    onRefreshStock={refreshStock}
                 />
             );
         }

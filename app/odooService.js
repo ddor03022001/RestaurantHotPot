@@ -97,7 +97,7 @@ class OdooService {
             fields: [
                 'id', 'name', 'currency_id', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id',
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
-                'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point'
+                'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer'
             ],
         });
 
@@ -451,7 +451,7 @@ class OdooService {
             {
                 fields: ['id', 'name', 'date_order', 'partner_id', 'amount_total', 'amount_tax',
                     'amount_paid', 'amount_return', 'state', 'pos_reference', 'lines',
-                    'session_id', 'user_id'],
+                    'session_id', 'user_id', 'statement_ids', 'picking_ids', 'currency_id', 'pricelist_id', 'note', 'table_id', 'ecommerce_code'],
                 order: 'id desc',
             }
         );
@@ -480,7 +480,7 @@ class OdooService {
             [[['id', 'in', lineIds]]],
             {
                 fields: ['id', 'order_id', 'product_id', 'qty', 'price_unit',
-                    'price_subtotal', 'price_subtotal_incl', 'discount'],
+                    'price_subtotal', 'price_subtotal_incl', 'discount_type', 'discount', 'discount_amount'],
             }
         );
     }

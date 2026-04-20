@@ -81,4 +81,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.removeAllListeners('customer-display-update');
         ipcRenderer.on('customer-display-update', (event, data) => callback(data));
     },
+
+    // Get API QR Code
+    getApiQrCode: (totalAmount) =>
+        ipcRenderer.invoke('get-api-qrcode', totalAmount),
 });

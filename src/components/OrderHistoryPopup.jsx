@@ -32,7 +32,7 @@ function OrderHistoryPopup({
     linesLoading,
     onViewDetail,
     onBackToList,
-    posName = 'HotPOS',
+    posName = 'SeaPOS',
     authData,
     posConfig,
 }) {

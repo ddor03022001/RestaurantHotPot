@@ -355,7 +355,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     statement_ids: statementIds,
                     ecommerce_code: ecommerceCode,
                     note: note,
-                    table_id: table.id,
+                    table_id: posMode === 'retail' ? false : table.id,
                     currency_id: posConfig.currency_id[0],
                     uid: uidId,
                     user_id: authData.user.uid
@@ -747,7 +747,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         </div>
                         <div className="print-bill-receipt" id="print-receipt">
                             <div className="receipt-header">
-                                <h2 className="receipt-shop-name">{posConfig?.name || 'HotPOS'}</h2>
+                                <h2 className="receipt-shop-name">{posConfig?.name || 'SeaPOS'}</h2>
                                 <p className="receipt-sub">BILL TẠM TÍNH</p>
                                 <p className="receipt-info">{isRetail ? 'Bán lẻ' : `Bàn ${table.number}`}</p>
                                 <p className="receipt-info">{new Date().toLocaleString('vi-VN')}</p>

@@ -266,7 +266,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
 
             const summaryData = [
                 [label.toUpperCase()],
-                [`POS: ${posConfig?.name || 'HotPOS'}`],
+                [`POS: ${posConfig?.name || 'SeaPOS'}`],
                 [`Ngày: ${dateLabel}`],
                 [`Nhân viên: ${authData?.user?.name || ''}`],
                 [],
@@ -331,7 +331,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
 
             // Generate filename
             const timestamp = now.toISOString().split('T')[0];
-            const filename = `HotPOS_${reportType}_${timestamp}.xlsx`;
+            const filename = `SeaPOS_${reportType}_${timestamp}.xlsx`;
 
             // Download
             XLSX.writeFile(wb, filename);
@@ -597,7 +597,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
                     <div className="mgmt-logo">
                         <span className="mgmt-logo-icon">🔥</span>
                         <div className="mgmt-logo-text">
-                            <span className="mgmt-logo-name">HotPOS</span>
+                            <span className="mgmt-logo-name">SeaPOS</span>
                             <span className="mgmt-logo-sub">Quản lý</span>
                         </div>
                     </div>

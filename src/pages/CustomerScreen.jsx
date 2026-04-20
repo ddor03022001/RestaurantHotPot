@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './CustomerScreen.css';
 import { formatPrice } from '../utils/formatters';
 
@@ -12,6 +12,9 @@ const CustomerScreen = () => {
             total: 0
         }
     });
+    const [qrCodeUrl, setQrCodeUrl] = useState(null);
+    const [qrLoading, setQrLoading] = useState(false);
+    const prevScreenRef = useRef('idle');
 
     useEffect(() => {
         if (window.electronAPI && window.electronAPI.onCustomerDisplayUpdate) {
@@ -23,6 +26,31 @@ const CustomerScreen = () => {
     }, []);
 
     const { screen, items, totalData } = displayState;
+
+    // Fetch QR code when entering payment screen
+    useEffect(() => {
+        if (screen === 'payment' && prevScreenRef.current !== 'payment') {
+            const totalAmount = totalData.total;
+            if (totalAmount > 0 && window.electronAPI && window.electronAPI.getApiQrCode) {
+                setQrLoading(true);
+                setQrCodeUrl(null);
+                window.electronAPI.getApiQrCode(totalAmount).then((data) => {
+                    if (data && data.qrDataURL) {
+                        setQrCodeUrl(data.qrDataURL);
+                    }
+                    setQrLoading(false);
+                }).catch((err) => {
+                    console.error('QR code error:', err);
+                    setQrLoading(false);
+                });
+            }
+        }
+        if (screen !== 'payment') {
+            setQrCodeUrl(null);
+            setQrLoading(false);
+        }
+        prevScreenRef.current = screen;
+    }, [screen, totalData.total]);
 
     return (
         <div className="customer-screen-container">
@@ -37,8 +65,8 @@ const CustomerScreen = () => {
                     muted       // Tắt tiếng (Bắt buộc phải có muted thì trình duyệt mới cho autoPlay)
                     playsInline // Chạy trực tiếp trên trang (quan trọng cho các thiết bị di động)
                     style={{
-                        width: '60%',
-                        height: '500px',
+                        width: '90%',
+                        height: '70%',
                         objectFit: 'cover', // Cắt xén khéo léo để video lấp đầy khung mà không bị méo
                         marginTop: '2rem',
                         borderRadius: '20px',
@@ -119,8 +147,29 @@ const CustomerScreen = () => {
             {/* Payment Overlay */}
             {screen === 'payment' && (
                 <div className="payment-overlay">
-                    <h2>Vui lòng nhận thanh toán</h2>
+                    <h2>Vui lòng thanh toán</h2>
                     <div className="payment-total">{formatPrice(totalData.total)}</div>
+
+                    {/* QR Code Section */}
+                    <div className="qr-code-section">
+                        {qrLoading && (
+                            <div className="qr-loading">
+                                <div className="qr-spinner"></div>
+                                <span>Đang tạo mã QR...</span>
+                            </div>
+                        )}
+                        {qrCodeUrl && !qrLoading && (
+                            <div className="qr-code-wrapper">
+                                <img
+                                    src={qrCodeUrl}
+                                    alt="VietQR Payment"
+                                    className="qr-code-image"
+                                />
+                                <p className="qr-scan-text">Quét mã để thanh toán</p>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="payment-instructions">
                         Quý khách vui lòng thanh toán tại quầy
                     </div>

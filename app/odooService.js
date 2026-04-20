@@ -97,7 +97,8 @@ class OdooService {
             fields: [
                 'id', 'name', 'currency_id', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id',
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
-                'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer'
+                'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer',
+                'enable_dynamic_qrcode_viet', 'apikey_qrcode_viet', 'client_id_qrcode_viet', 'account_no', 'account_name', 'account_id'
             ],
         });
 

@@ -12,7 +12,7 @@ function createWindow() {
         height: 900,
         minWidth: 1100,
         minHeight: 768,
-        title: 'HotPos - Restaurant POS',
+        title: 'SeaPos - Restaurant POS',
         show: false,
         autoHideMenuBar: true,
         webPreferences: {
@@ -299,6 +299,47 @@ ipcMain.handle('odoo:createProductionOrder', async (event, productId, quantity, 
         return { success: true, data: result };
     } catch (error) {
         return { success: false, error: error.message };
+    }
+});
+
+// get vietQR
+
+ipcMain.handle('get-api-qrcode', async (_, totalAmount) => {
+    try {
+        const apiUrl = 'https://api.vietqr.io/v2/generate';
+
+        const payload = {
+            accountNo: '8650025365',
+            accountName: 'CTY TNHH DANNYGREEN RETAIL FRANCHISE',
+            acqId: '970418',
+            amount: totalAmount,
+            addInfo: "Thanh toán đơn hàng POS",
+            format: "text",
+            template: "compact"
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'x-api-key': '106f81f6-abff-42ea-9b1b-c07538846b6e',
+                'x-client-id': '51e98ca7-e8f7-497b-bf0f-e0e0b8d8d404',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const responseData = await response.json();
+
+        if (responseData.code === '00') {
+            return responseData.data;
+        } else {
+            console.error('Lỗi từ API VietQR (mã lỗi khác 00):', responseData);
+            return null;
+        }
+
+    } catch (error) {
+        console.error('Lỗi khi gọi API VietQR:', error.message);
+        return null;
     }
 });
 

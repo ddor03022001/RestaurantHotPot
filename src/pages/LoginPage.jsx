@@ -98,7 +98,7 @@ function LoginPage({ onLogin }) {
                             </defs>
                         </svg>
                     </div>
-                    <h1 className="login-title">HotPos</h1>
+                    <h1 className="login-title">SeaPos</h1>
                     <p className="login-subtitle">Restaurant Point of Sale</p>
                 </div>
 

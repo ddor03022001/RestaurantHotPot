@@ -44,9 +44,17 @@
 }
 
 @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0px); }
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
 }
 
 .customer-screen-right {
@@ -180,8 +188,13 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .payment-overlay h2 {
@@ -204,5 +217,90 @@
     padding: 1.5rem 3rem;
     border-radius: 50px;
     border: 2px solid #334155;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* QR Code Section */
+.qr-code-section {
+    margin-bottom: 2rem;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+.qr-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #334155;
+    border-top-color: #38bdf8;
+    border-radius: 50%;
+    animation: qrSpin 0.8s linear infinite;
+}
+
+@keyframes qrSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.qr-code-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    animation: qrFadeIn 0.5s ease-out forwards;
+}
+
+@keyframes qrFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.qr-code-image {
+    width: 260px;
+    height: 260px;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 8px;
+    box-shadow:
+        0 0 30px rgba(56, 189, 248, 0.3),
+        0 10px 40px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(56, 189, 248, 0.4);
+}
+
+.qr-scan-text {
+    font-size: 1.2rem;
+    color: #38bdf8;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    animation: qrPulse 2s ease-in-out infinite;
+}
+
+@keyframes qrPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }

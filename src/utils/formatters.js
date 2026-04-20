@@ -1,5 +1,5 @@
 /**
- * Shared formatting & helper utilities for HotPOS
+ * Shared formatting & helper utilities for SeaPOS
  */
 
 /**

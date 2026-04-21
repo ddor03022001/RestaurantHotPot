@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { formatPrice } from '../utils/formatters';
+import LabelPrintPopup from '../components/LabelPrintPopup';
 import './PaymentScreen.css';
 
 const JOURNAL_ICONS = {
@@ -85,6 +86,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [ecommerceCode, setEcommerceCode] = useState(table.ecommerceCode || '');
     const [showEcommerceCodePopup, setShowEcommerceCodePopup] = useState(false);
     const [tempEcommerceCode, setTempEcommerceCode] = useState('');
+    const [showLabelPopup, setShowLabelPopup] = useState(false);
 
     // Calculate item total after per-item discount
     const getItemTotal = (item) => {
@@ -282,7 +284,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     discount_amount: item.discount.type === 'amount' ? item.discount.value : 0,
                     tax_ids: [[6, false, item.product.taxes_id || []]],
                     note: item.note || '',
-                    plus_point: localUsedPoints > 0 || billDiscountAmount > 0 ? 0 : effectiveDiscountPct / 100,
+                    plus_point: localUsedPoints > 0 || billDiscountAmount > 0 || earnedPoints <= 0 ? 0 : effectiveDiscountPct / 100,
                     session_info: {
                         user: {
                             id: authData.user.uid,
@@ -602,7 +604,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     {/* Total + Pay button */}
                     <div className="payment-total-area">
                         {/* Loyalty points section (Moved from OrderScreen) */}
-                        {loyaltyEnabled && selectedCustomer && (
+                        {loyaltyEnabled && selectedCustomer && selectedCustomer.group_id && selectedCustomer.group_id.name !== "Khách lẻ" && (
                             <div className="loyalty-section glass-card" style={{ marginBottom: '20px', padding: '15px' }}>
                                 <div className="loyalty-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                     <div className="loyalty-current">
@@ -688,22 +690,29 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         )}
                         <div className="payment-actions-row" style={{ marginBottom: '10px' }}>
                             <button
-                                className="btn btn-secondary payment-print-btn"
+                                className={`btn ${note && note.trim() ? 'btn-warning' : 'btn-secondary'} payment-print-btn`}
                                 onClick={() => {
                                     setTempNote(note);
                                     setShowNotePopup(true);
                                 }}
                             >
-                                📝 Ghi chú
+                                📝 Ghi chú {note && note.trim() ? '✓' : ''}
                             </button>
                             <button
-                                className="btn btn-secondary payment-print-btn"
+                                className={`btn ${ecommerceCode && ecommerceCode.trim() ? 'btn-warning' : 'btn-secondary'} payment-print-btn`}
                                 onClick={() => {
                                     setTempEcommerceCode(ecommerceCode);
                                     setShowEcommerceCodePopup(true);
                                 }}
                             >
-                                🛒 TMĐT Code
+                                🛒 TMĐT Code {ecommerceCode && ecommerceCode.trim() ? '✓' : ''}
+                            </button>
+                            <button
+                                className="btn btn-secondary payment-print-btn"
+                                onClick={() => setShowLabelPopup(true)}
+                                disabled={orderItems.length === 0}
+                            >
+                                🏷️ In tem
                             </button>
                         </div>
                         <div className="payment-actions-row">
@@ -890,6 +899,16 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     </div>
                 </div>
             )}
+
+            {/* Label Printing Popup */}
+            <LabelPrintPopup
+                show={showLabelPopup}
+                onClose={() => setShowLabelPopup(false)}
+                orderItems={orderItems}
+                getProductPrice={getProductPrice}
+                posConfig={posConfig}
+                ecommerceCode={ecommerceCode}
+            />
         </div>
     );
 }

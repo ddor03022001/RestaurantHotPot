@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
 const path = require('path');
 const OdooService = require('./odooService');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let customerWindow = null;
@@ -33,6 +34,7 @@ function createWindow() {
     // Maximize and show the window
     mainWindow.maximize();
     mainWindow.show();
+
 }
 
 function createCustomerWindow() {
@@ -365,7 +367,14 @@ ipcMain.handle('window:sendToCustomerDisplay', (event, data) => {
 
 // ========== App Lifecycle ==========
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    createWindow();
+
+    // --- KIỂM TRA UPDATE SAU KHI APP MỞ 2 GIÂY ---
+    setTimeout(() => {
+        autoUpdater.checkForUpdatesAndNotify();
+    }, 2000);
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
@@ -373,4 +382,41 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// --- Lắng nghe các sự kiện cập nhật (Tùy chọn, dùng để debug hoặc báo cho user) ---
+autoUpdater.on('checking-for-update', () => {
+    // Tùy chọn: Có thể bật log này lên nếu muốn biết lúc nào nó bắt đầu tìm kiếm
+    // console.log('Đang tìm bản cập nhật...');
+});
+
+autoUpdater.on('update-available', () => {
+    // Hiển thị popup cho người dùng biết là ĐANG tải bản mới
+    dialog.showMessageBox({
+        type: 'info',
+        title: 'Bản cập nhật mới',
+        message: 'Đã tìm thấy phiên bản mới. Hệ thống đang tải xuống ngầm, vui lòng không tắt ứng dụng...',
+        buttons: ['Đồng ý']
+    });
+});
+
+autoUpdater.on('update-not-available', () => {
+    // App đang ở bản mới nhất, không làm gì cả
+});
+
+autoUpdater.on('error', (err) => {
+    // CỰC KỲ QUAN TRỌNG: Bật popup báo lỗi nếu update thất bại (ví dụ: mất mạng, lỗi repo private)
+    dialog.showErrorBox('Lỗi tự động cập nhật', err == null ? "Không xác định" : (err.stack || err).toString());
+});
+
+autoUpdater.on('update-downloaded', () => {
+    // Hiển thị popup khi đã TẢI XONG và chờ cài đặt
+    dialog.showMessageBox({
+        type: 'question',
+        title: 'Cài đặt bản cập nhật',
+        message: 'Đã tải xong bản cập nhật. Ứng dụng sẽ tự động khởi động lại để cài đặt ngay bây giờ.',
+        buttons: ['Cài đặt ngay']
+    }).then(() => {
+        autoUpdater.quitAndInstall(false, true);
+    });
 });

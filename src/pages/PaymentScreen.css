@@ -447,13 +447,16 @@
 /* Payment actions row */
 .payment-actions-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
 .payment-print-btn {
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-width: 100px;
     padding: 14px 16px;
     font-size: 13px;
+    white-space: nowrap;
 }
 
 .payment-pay-btn {

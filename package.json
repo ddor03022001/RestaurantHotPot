@@ -7,12 +7,13 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build && electron-builder",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "publish-app": "vite build && electron-builder -p always"
   },
   "build": {
     "appId": "com.hotpos.app",
     "productName": "HotPos",
-    "asar": false,
+    "asar": true,
     "files": [
       "**/*",
       "!src/**",
@@ -34,9 +35,17 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ddor03022001",
+        "repo": "RestaurantHotPot"
+      }
+    ]
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",

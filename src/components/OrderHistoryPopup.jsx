@@ -42,8 +42,6 @@ function OrderHistoryPopup({
     if (!show) return null;
 
     const handleConfirmReturn = async () => {
-        console.log(posConfig);
-        return;
         setProcessing(true);
         try {
             const statementIds = [];

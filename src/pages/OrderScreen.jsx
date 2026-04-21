@@ -47,7 +47,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [productionError, setProductionError] = useState('');
 
     // Label printing state
-    const [showLabelPopup, setShowLabelPopup] = useState(false);
+
     const [showProduceConfirm, setShowProduceConfirm] = useState(false);
 
     // Order history — shared hook (for retail mode)
@@ -688,14 +688,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         </button>
                     )}
 
-                    {/* Label printing button */}
-                    <button
-                        className={`order-toolbar-btn ${orderItems.length > 0 ? 'order-toolbar-btn-active' : ''}`}
-                        onClick={() => setShowLabelPopup(true)}
-                        disabled={orderItems.length === 0}
-                    >
-                        🏷️ In tem
-                    </button>
+
 
                     <button
                         className={`order-toolbar-btn ${customerDisplayOn ? 'order-toolbar-btn-active' : ''}`}
@@ -1419,139 +1412,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                     </div>
                 </div>
             )}
-            {/* Label Printing Popup */}
-            {showLabelPopup && (
-                <div className="order-popup-overlay" onClick={() => setShowLabelPopup(false)}>
-                    <div className="label-popup" onClick={(e) => e.stopPropagation()}>
-                        <div className="label-popup-header">
-                            <h3 className="label-popup-title">🏷️ In tem sản phẩm ({orderItems.reduce((s, i) => s + i.quantity, 0)} tem)</h3>
-                            <div className="label-popup-actions">
-                                <button className="btn btn-primary label-print-btn" onClick={() => {
-                                    const printContent = document.getElementById('label-print-area');
-                                    const printWindow = window.open('', '_blank', 'width=800,height=600');
-                                    printWindow.document.write(`
-                                        <html>
-                                        <head>
-                                            <title>In tem sản phẩm</title>
-                                            <style>
-                                                * { margin: 0; padding: 0; box-sizing: border-box; }
-                                                body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; }
-                                                .label-grid {
-                                                    display: flex; flex-direction: column;
-                                                    align-items: center; gap: 0; padding: 0;
-                                                }
-                                                .product-label {
-                                                    width: 50mm; height: 30mm;
-                                                    border: 0.5px dashed #ccc;
-                                                    display: flex; flex-direction: row;
-                                                    align-items: stretch;
-                                                    page-break-inside: avoid;
-                                                    background: #fff; overflow: hidden;
-                                                }
-                                                .label-left {
-                                                    width: 14mm; display: flex;
-                                                    flex-direction: column; align-items: center;
-                                                    justify-content: center; gap: 1mm;
-                                                    padding: 1.5mm;
-                                                    border-right: 0.3px solid #e0e0e0;
-                                                    background: #fafafa;
-                                                }
-                                                .label-logo {
-                                                    width: 10mm; height: 10mm;
-                                                    border-radius: 1.5mm; object-fit: cover;
-                                                }
-                                                .label-table-info {
-                                                    font-size: 6pt; color: #888;
-                                                    text-align: center; line-height: 1.2;
-                                                    font-weight: 600;
-                                                }
-                                                .label-right {
-                                                    flex: 1; display: flex;
-                                                    flex-direction: column; justify-content: center;
-                                                    padding: 1.5mm 2.5mm; gap: 0.8mm; overflow: hidden;
-                                                }
-                                                .label-product-name {
-                                                    font-size: 8pt; font-weight: 700;
-                                                    color: #111; line-height: 1.25;
-                                                    overflow: hidden; display: -webkit-box;
-                                                    -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-                                                }
-                                                .label-price-row {
-                                                    display: flex; align-items: center;
-                                                    justify-content: space-between; gap: 2mm;
-                                                }
-                                                .label-price {
-                                                    font-size: 10pt; font-weight: 800; color: #000;
-                                                }
-                                                .label-qty {
-                                                    font-size: 5.5pt; color: #666; font-weight: 600;
-                                                    background: #f0f0f0; padding: 0.3mm 1.5mm;
-                                                    border-radius: 1mm; white-space: nowrap;
-                                                }
-                                                .label-note {
-                                                    font-size: 6.5pt; color: #444; font-style: italic;
-                                                    line-height: 1.2; border-top: 0.3px dashed #ddd;
-                                                    padding-top: 0.5mm; overflow: hidden;
-                                                    white-space: nowrap; text-overflow: ellipsis;
-                                                }
-                                                .label-date {
-                                                    font-size: 5.5pt; color: #aaa; text-align: right;
-                                                }
-                                                @page { size: 50mm 30mm landscape; margin: 0; }
-                                                @media print {
-                                                    body { margin: 0; }
-                                                    .label-grid { gap: 0; padding: 0; }
-                                                    .product-label { border: none; }
-                                                }
-                                            </style>
-                                        </head>
-                                        <body>
-                                    ` + printContent.innerHTML + `
-                                            <script>window.onload = function() { window.print(); window.close(); }<\/script>
-                                        </body>
-                                        </html>
-                                    `);
-                                    printWindow.document.close();
-                                }}>
-                                    🖨️ In
-                                </button>
-                                <button className="order-popup-close" onClick={() => setShowLabelPopup(false)}>✕</button>
-                            </div>
-                        </div>
-                        <div className="label-popup-body">
-                            <div id="label-print-area" className="label-grid">
-                                {orderItems.map((item) => {
-                                    const labels = [];
-                                    for (let i = 0; i < item.quantity; i++) {
-                                        labels.push(
-                                            <div key={`${item.lineId}-${i}`} className="product-label">
-                                                <div className="label-left">
-                                                    <img src={item.product.image_medium ? `data:image/png;base64,${item.product.image_medium}` : "./logo.png"} alt="Logo" className="label-logo" />
-                                                    {/* <div className="label-table-info">Bàn {table.number}</div> */}
-                                                </div>
-                                                <div className="label-right">
-                                                    <div className="label-product-name">
-                                                        {item.product.name || item.product.display_name}
-                                                    </div>
-                                                    <div className="label-price-row">
-                                                        <span className="label-price">{formatPrice(getProductPrice(item.product))}</span>
-                                                        <span className="label-qty">Tem {i + 1}/{item.quantity}</span>
-                                                    </div>
-                                                    {item.note && item.note.trim() && (
-                                                        <div className="label-note">📝 {item.note}</div>
-                                                    )}
-                                                    <div className="label-date">{new Date().toLocaleString('vi-VN')}</div>
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-                                    return labels;
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* ===== RETAIL MODE: Order History (shared component) ===== */}
             <OrderHistoryPopup

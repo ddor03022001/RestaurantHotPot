@@ -182,7 +182,7 @@ class OdooService {
         const products = await OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'type', 'image_medium', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids'],
+                fields: ['id', 'name', 'type', 'image_medium', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids', 'print_product_label'],
             }
         );
 

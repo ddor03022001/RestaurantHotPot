@@ -416,10 +416,10 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             {/* Payment Confirmation Popup */}
             {showPayConfirm && (
                 <div className="popup-overlay" onClick={() => setShowPayConfirm(false)}>
-                    <div className="popup-card slide-up" onClick={e => e.stopPropagation()}>
+                    <div className="popup-card slide-up" style={{ borderRadius: '20px' }} onClick={e => e.stopPropagation()}>
                         <div className="popup-header">
-                            <h3 className="popup-title">🤔 Xác nhận thanh toán</h3>
-                            <button className="popup-close-btn" onClick={() => setShowPayConfirm(false)}>✕</button>
+                            <h3 className="popup-title" style={{ padding: '10px' }}>🤔 Xác nhận thanh toán</h3>
+                            {/* <button className="popup-close-btn" onClick={() => setShowPayConfirm(false)}>✕</button> */}
                         </div>
                         <div className="popup-body">
                             <p style={{ textAlign: 'center', fontSize: '1.1rem', marginBottom: '20px' }}>
@@ -428,7 +428,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             </p>
                         </div>
                         <div className="popup-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowPayConfirm(false)}>
+                            <button className="btn btn-secondary" style={{ marginRight: '20px' }} onClick={() => setShowPayConfirm(false)}>
                                 Xem lại
                             </button>
                             <button className="btn btn-primary" onClick={handleConfirmPayment}>

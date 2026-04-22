@@ -56,7 +56,7 @@ const CustomerScreen = () => {
         <div className="customer-screen-container">
             {/* Left Promotional Panel */}
             <div className="customer-screen-left">
-                <h1 className="brand-title">Welcome to DannyGreen Lovers</h1>
+                <h1 className="brand-title">Welcome to DannyGreen Retail</h1>
                 <p className="brand-subtitle"></p>
                 {/* You can replace this img with an actual promotional video or carousel */}
                 <video

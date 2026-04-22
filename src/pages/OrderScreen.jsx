@@ -1434,7 +1434,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             {/* ===== RETAIL MODE: Close Session Popup ===== */}
             {isRetail && showCloseSessionPopup && (
                 <div className="order-popup-overlay" onClick={() => setShowCloseSessionPopup(false)}>
-                    <div className="order-popup" onClick={(e) => e.stopPropagation()}>
+                    <div className="order-popup" style={{ padding: '20px' }} onClick={(e) => e.stopPropagation()}>
                         <div className="order-popup-header">
                             <h3 className="order-popup-title">🔒 Đóng ca POS?</h3>
                             <button className="order-popup-close" onClick={() => setShowCloseSessionPopup(false)}>✕</button>

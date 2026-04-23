@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import OrderHistoryPopup from '../components/OrderHistoryPopup';
+import StockTransferPopup from '../components/StockTransferPopup';
 import { formatPrice, formatDate, getStateLabel, getStateClass } from '../utils/formatters';
 import { useOrderHistory } from '../hooks/useOrderHistory';
 import './OrderScreen.css';
@@ -57,6 +58,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [showCloseSessionPopup, setShowCloseSessionPopup] = useState(false);
     const [closingSession, setClosingSession] = useState(false);
     const [closeSessionError, setCloseSessionError] = useState('');
+
+    // Stock transfer popup state
+    const [showStockTransfer, setShowStockTransfer] = useState(false);
 
     const [customerDisplayOn, setCustomerDisplayOn] = useState(false);
     const toggleCustomerDisplay = () => {
@@ -688,7 +692,15 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         </button>
                     )}
 
-
+                    {/* Stock Transfer button */}
+                    {posConfig?.internal_transfer && (
+                        <button
+                            className="order-toolbar-btn"
+                            onClick={() => setShowStockTransfer(true)}
+                        >
+                            🏬 Chuyển kho
+                        </button>
+                    )}
 
                     <button
                         className={`order-toolbar-btn ${customerDisplayOn ? 'order-toolbar-btn-active' : ''}`}
@@ -1429,6 +1441,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 posName={posConfig?.name}
                 authData={authData}
                 posConfig={posConfig}
+                onRefreshStock={onRefreshStock}
             />
 
             {/* ===== RETAIL MODE: Close Session Popup ===== */}
@@ -1469,6 +1482,16 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                     </div>
                 </div>
             )}
+
+            {/* ===== Stock Transfer Popup ===== */}
+            <StockTransferPopup
+                show={showStockTransfer}
+                onClose={() => setShowStockTransfer(false)}
+                products={products}
+                posData={posData}
+                posConfig={posConfig}
+                onRefreshStock={onRefreshStock}
+            />
         </div>
     );
 }

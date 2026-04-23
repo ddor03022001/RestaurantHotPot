@@ -1,0 +1,808 @@
+/* ========================
+   Stock Transfer Popup Styles
+   ======================== */
+
+.stock-transfer-popup {
+    width: 680px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.98);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(59, 130, 246, 0.08);
+    animation: scaleIn 0.2s ease;
+    overflow: hidden;
+}
+
+/* Header */
+.stock-transfer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.05));
+}
+
+.stock-transfer-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.stock-transfer-icon {
+    font-size: 28px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 12px;
+}
+
+.stock-transfer-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.stock-transfer-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 2px 0 0 0;
+}
+
+/* Body */
+.stock-transfer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Sections */
+.stock-transfer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stock-transfer-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stock-transfer-label-icon {
+    font-size: 14px;
+}
+
+/* Transaction Type Grid */
+.stock-transfer-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.stock-transfer-type-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.stock-transfer-type-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.stock-transfer-type-active {
+    background: rgba(59, 130, 246, 0.12) !important;
+    border-color: rgba(59, 130, 246, 0.4) !important;
+    color: #3b82f6 !important;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.stock-transfer-type-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stock-transfer-type-check {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #3b82f6;
+    border-radius: 50%;
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+    animation: scaleIn 0.15s ease;
+}
+
+/* Textarea */
+.stock-transfer-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 70px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.stock-transfer-textarea:focus {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.stock-transfer-textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* Divider */
+.stock-transfer-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.stock-transfer-divider::before,
+.stock-transfer-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.stock-transfer-divider-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+/* Product Search */
+.stock-transfer-search-wrapper {
+    position: relative;
+}
+
+.stock-transfer-search-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.stock-transfer-search-container:focus-within {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.stock-transfer-search-icon {
+    font-size: 14px;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+.stock-transfer-search-input {
+    flex: 1;
+    padding: 12px 0;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: 13px;
+    outline: none;
+}
+
+.stock-transfer-search-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.stock-transfer-search-clear {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.stock-transfer-search-clear:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Dropdown */
+.stock-transfer-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    background: rgba(17, 24, 39, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    animation: scaleIn 0.12s ease;
+}
+
+.stock-transfer-dropdown-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.stock-transfer-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.stock-transfer-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.stock-transfer-dropdown-item:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.stock-transfer-dropdown-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+}
+
+.stock-transfer-dropdown-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stock-transfer-dropdown-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stock-transfer-dropdown-code {
+    font-size: 11px;
+    color: var(--accent-secondary);
+    font-weight: 600;
+    padding: 1px 6px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+}
+
+.stock-transfer-dropdown-stock {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.stock-transfer-dropdown-add {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.1);
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.stock-transfer-dropdown-item:hover .stock-transfer-dropdown-add {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+/* Transfer Lines */
+.stock-transfer-lines {
+    flex: 1;
+    min-height: 120px;
+}
+
+.stock-transfer-lines-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    color: var(--text-muted);
+    gap: 6px;
+}
+
+.stock-transfer-lines-empty-icon {
+    font-size: 36px;
+    opacity: 0.5;
+    margin-bottom: 4px;
+}
+
+.stock-transfer-lines-empty p {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.stock-transfer-lines-empty-hint {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    opacity: 0.7;
+}
+
+/* Lines table */
+.stock-transfer-line-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+
+.stock-transfer-line-header .stl-col {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stock-transfer-line-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.12s ease;
+    border-radius: 8px;
+    margin-bottom: 2px;
+}
+
+.stock-transfer-line-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.stl-col {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stl-col-name {
+    flex: 3;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stl-product-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stl-product-code {
+    font-size: 11px;
+    color: var(--accent-secondary);
+    font-weight: 500;
+}
+
+.stl-col-stock {
+    flex: 0.8;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.stl-col-qty {
+    flex: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.stl-qty-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--font-family);
+}
+
+.stl-qty-btn:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: var(--accent-secondary);
+    color: var(--accent-secondary);
+}
+
+.stl-qty-input {
+    width: 54px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-family: var(--font-family);
+    outline: none;
+    -moz-appearance: textfield;
+    transition: border-color 0.15s ease;
+}
+
+.stl-qty-input::-webkit-outer-spin-button,
+.stl-qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stl-qty-input:focus {
+    border-color: var(--accent-secondary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stl-col-action {
+    flex: 0.5;
+    display: flex;
+    justify-content: center;
+}
+
+.stl-remove-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.15s ease;
+}
+
+.stl-remove-btn:hover {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Footer */
+.stock-transfer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.stock-transfer-footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stock-transfer-footer-type {
+    font-size: 13px;
+    font-weight: 700;
+    color: #3b82f6;
+}
+
+.stock-transfer-footer-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.stock-transfer-footer-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.stock-transfer-submit-btn {
+    padding: 10px 20px !important;
+    font-size: 13px !important;
+}
+
+.stock-transfer-submit-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ===== Spinner ===== */
+.stock-transfer-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: stSpinner 0.6s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+@keyframes stSpinner {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== Error Bar ===== */
+.stock-transfer-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 20px;
+    background: rgba(239, 68, 68, 0.1);
+    border-top: 1px solid rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+    font-size: 13px;
+    font-weight: 500;
+    animation: stSlideDown 0.2s ease;
+}
+
+@keyframes stSlideDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stock-transfer-error-close {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.15);
+    border: none;
+    border-radius: 50%;
+    color: #fca5a5;
+    font-size: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.stock-transfer-error-close:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: white;
+}
+
+/* ===== Success Popup ===== */
+.stock-transfer-success-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.15s ease;
+}
+
+.stock-transfer-success-card {
+    width: 380px;
+    background: rgba(17, 24, 39, 0.98);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 20px;
+    padding: 40px 32px 32px;
+    text-align: center;
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.5),
+        0 0 80px rgba(16, 185, 129, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    animation: stSuccessIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes stSuccessIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Success Icon */
+.stock-transfer-success-icon-wrapper {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 20px;
+}
+
+.stock-transfer-success-icon {
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: 50%;
+    color: white;
+    font-size: 32px;
+    font-weight: 800;
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.35);
+    animation: stCheckBounce 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes stCheckBounce {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.stock-transfer-success-ring {
+    position: absolute;
+    inset: -6px;
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    border-radius: 50%;
+    animation: stRingPulse 1.5s ease-out infinite;
+}
+
+@keyframes stRingPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+.stock-transfer-success-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.stock-transfer-success-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+}
+
+.stock-transfer-success-desc strong {
+    color: #10b981;
+    font-weight: 700;
+}
+
+/* Stats */
+.stock-transfer-success-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 0;
+    margin-bottom: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stock-transfer-success-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.stock-transfer-success-stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #10b981;
+}
+
+.stock-transfer-success-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stock-transfer-success-stat-divider {
+    width: 1px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stock-transfer-success-btn {
+    width: 100%;
+    padding: 14px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+}

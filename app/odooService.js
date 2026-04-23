@@ -98,9 +98,31 @@ class OdooService {
                 'id', 'name', 'currency_id', 'stock_location_id', 'pricelist_id', 'available_pricelist_ids', 'company_id',
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
                 'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer',
-                'enable_dynamic_qrcode_viet', 'apikey_qrcode_viet', 'client_id_qrcode_viet', 'account_no', 'account_name', 'account_id'
+                'enable_dynamic_qrcode_viet', 'apikey_qrcode_viet', 'client_id_qrcode_viet', 'account_no', 'account_name', 'account_id',
+                'seller_ids', 'internal_transfer', 'operation_type_internal_transfer'
             ],
         });
+
+        // sellers
+        const allSellerIds = [];
+        for (const p of configs) {
+            if (p.seller_ids && p.seller_ids.length > 0) {
+                allSellerIds.push(...p.seller_ids);
+            }
+        }
+        const sellers = await OdooService._execute(url, db, uid, password, 'res.users', 'search_read',
+            [[['id', 'in', allSellerIds]]],
+            { fields: ['id', 'name'] }
+        );
+        const sellerMap = {};
+        for (const seller of sellers) {
+            sellerMap[seller.id] = seller;
+        }
+        for (const p of configs) {
+            if (p.seller_ids && p.seller_ids.length > 0) {
+                p.seller_ids = p.seller_ids.map(id => sellerMap[id]);
+            }
+        }
 
         // For each config, check if there's an open session and who owns it
         for (const config of configs) {
@@ -452,7 +474,7 @@ class OdooService {
             {
                 fields: ['id', 'name', 'date_order', 'partner_id', 'amount_total', 'amount_tax',
                     'amount_paid', 'amount_return', 'state', 'pos_reference', 'lines',
-                    'session_id', 'user_id', 'statement_ids', 'picking_ids', 'currency_id', 'pricelist_id', 'note', 'table_id', 'ecommerce_code'],
+                    'session_id', 'user_id', 'statement_ids', 'picking_ids', 'currency_id', 'pricelist_id', 'note', 'table_id', 'ecommerce_code', 'return_order_id'],
                 order: 'id desc',
             }
         );
@@ -501,6 +523,18 @@ class OdooService {
     }
 
     /**
+     * Get Stock proudcts
+     */
+    static getTransactionTypes(url, db, uid, password) {
+        return OdooService._execute(url, db, uid, password, 'transaction.type', 'search_read',
+            [[['is_pos', '=', true]]],
+            {
+                fields: ['id', 'name', 'code', 'type'],
+            }
+        );
+    }
+
+    /**
      * Get Tables
      */
     static async getTables(url, db, uid, password, configId) {
@@ -523,6 +557,20 @@ class OdooService {
             { fields: ['id', 'name', 'seats'] }
         );
         return tables;
+    }
+
+    /**
+     * Create a new Internal Transfer
+     */
+    static async createInternalTransfer(url, db, uid, password, pickingData) {
+        try {
+            const result = await OdooService._execute(url, db, uid, password, 'sea.pos.internal.transfer.desktop', 'create_from_ui', [pickingData]);
+            console.log("Create Internal Transfer result:", result);
+            return result;
+        } catch (error) {
+            console.error("Create Internal Transfer error:", error);
+            throw error;
+        }
     }
 
     /**

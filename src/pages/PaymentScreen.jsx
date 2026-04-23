@@ -87,6 +87,8 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [showEcommerceCodePopup, setShowEcommerceCodePopup] = useState(false);
     const [tempEcommerceCode, setTempEcommerceCode] = useState('');
     const [showLabelPopup, setShowLabelPopup] = useState(false);
+    const [selectedSeller, setSelectedSeller] = useState(null);
+    const [showSellerPopup, setShowSellerPopup] = useState(false);
 
     // Calculate item total after per-item discount
     const getItemTotal = (item) => {
@@ -360,7 +362,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     table_id: posMode === 'retail' ? false : table.id,
                     currency_id: posConfig.currency_id[0],
                     uid: uidId,
-                    user_id: authData.user.uid
+                    user_id: selectedSeller?.id || authData.user.uid
                 },
                 id: uidId,
                 to_invoice: true
@@ -451,6 +453,14 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         </h1>
                         <p className="payment-header-meta">{posConfig.name} • {authData.user.name}</p>
                     </div>
+                </div>
+                <div className="payment-header-right">
+                    <button
+                        className={`btn ${selectedSeller ? 'btn-success' : 'btn-warning'} seller-select-btn`}
+                        onClick={() => setShowSellerPopup(true)}
+                    >
+                        {selectedSeller ? `👤 ${selectedSeller.name}` : '👤 Chọn người bán'}
+                    </button>
                 </div>
             </header>
 
@@ -726,7 +736,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             <button
                                 className="btn btn-primary payment-pay-btn"
                                 onClick={handlePaymentClick}
-                                disabled={processing || orderItems.length === 0 || totalPaid < orderTotal}
+                                disabled={processing || orderItems.length === 0 || totalPaid < orderTotal || !selectedSeller}
                             >
                                 {processing ? (
                                     <>
@@ -909,8 +919,49 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 posConfig={posConfig}
                 ecommerceCode={ecommerceCode}
             />
+
+            {/* Seller Selection Popup */}
+            {showSellerPopup && (
+                <div className="popup-overlay" onClick={() => setShowSellerPopup(false)}>
+                    <div className="popup-card slide-up seller-popup" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
+                        <div className="popup-header">
+                            <h3 className="popup-title">👤 Chọn người bán hàng</h3>
+                            {/* <button className="popup-close-btn" onClick={() => setShowSellerPopup(false)}>✕</button> */}
+                        </div>
+                        <div className="popup-body">
+                            <div className="seller-list">
+                                {posConfig.seller_ids && posConfig.seller_ids.length > 0 ? (
+                                    posConfig.seller_ids.map((seller) => (
+                                        <div
+                                            key={seller.id}
+                                            className={`seller-item ${selectedSeller?.id === seller.id ? 'seller-item-active' : ''}`}
+                                            onClick={() => {
+                                                setSelectedSeller(seller);
+                                                setShowSellerPopup(false);
+                                            }}
+                                        >
+                                            <div className="seller-item-avatar">
+                                                {seller.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="seller-item-info">
+                                                <span className="seller-item-name">{seller.name}</span>
+                                                {selectedSeller?.id === seller.id && <span className="seller-item-check">✓</span>}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="seller-empty">
+                                        <p>Không có danh sách người bán hàng</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
 export default PaymentScreen;
+

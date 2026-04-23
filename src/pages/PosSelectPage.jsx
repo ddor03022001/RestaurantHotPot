@@ -75,7 +75,7 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
 
             // Load products, customers, categories, pricelists, promotions
             setLoadingMessage('Đang tải sản phẩm...');
-            let products = [], customers = [], categories = [], pricelists = [], promotions = [], paymentJournals = [], tables = [];
+            let products = [], customers = [], categories = [], pricelists = [], promotions = [], paymentJournals = [], tables = [], transactionTypes = [];
 
             if (window.electronAPI) {
                 const [prodResult, custResult, catResult, plResult, promoResult, journalResult] = await Promise.all([
@@ -109,6 +109,8 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                 }
                 const resultTable = await window.electronAPI.getTables(config.id);
                 tables = resultTable.success ? resultTable.result : [];
+                const resultTransactionTypes = await window.electronAPI.getTransactionTypes();
+                transactionTypes = resultTransactionTypes.success ? resultTransactionTypes.result : [];
             } else {
                 // Browser mock data
                 await new Promise((r) => setTimeout(r, 600));
@@ -157,7 +159,7 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
             setLoadingMessage('');
             onSelectPos(
                 { ...config, session },
-                { products, customers, categories, pricelists, promotions, paymentJournals, tables, defaultPricelistId: config.pricelist_id ? config.pricelist_id[0] : null }
+                { products, customers, categories, pricelists, promotions, paymentJournals, tables, transactionTypes, defaultPricelistId: config.pricelist_id ? config.pricelist_id[0] : null }
             );
         } catch (err) {
             setError(err.message);

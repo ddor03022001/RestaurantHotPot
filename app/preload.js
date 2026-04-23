@@ -73,6 +73,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getTables: (configId) =>
         ipcRenderer.invoke('odoo:getTables', configId),
 
+    // Get transaction types
+    getTransactionTypes: () =>
+        ipcRenderer.invoke('odoo:getTransactionTypes'),
+
+    // Create Internal Transfer
+    createInternalTransfer: (pickingData) =>
+        ipcRenderer.invoke('odoo:createInternalTransfer', pickingData),
+
     // Customer Display
     toggleCustomerDisplay: (show) => ipcRenderer.invoke('window:toggleCustomerDisplay', show),
     sendToCustomerDisplay: (data) => ipcRenderer.invoke('window:sendToCustomerDisplay', data),

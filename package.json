@@ -39,8 +39,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "ddor03022001",
-        "repo": "RestaurantHotPot"
+        "owner": "seatekdev",
+        "repo": "desktop_app"
       }
     ]
   },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { formatPrice, formatDate, getStateLabel, getStateClass, getCustomerName, getProductName } from '../utils/formatters';
 import './OrderHistoryPopup.css';
 
@@ -35,11 +35,69 @@ function OrderHistoryPopup({
     posName = 'SeaPOS',
     authData,
     posConfig,
+    onRefreshStock,
 }) {
     const [showReturnConfirm, setShowReturnConfirm] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [returnSuccess, setReturnSuccess] = useState(null); // { orderRef }
+    const [returnError, setReturnError] = useState('');
+    const [orderSearch, setOrderSearch] = useState('');
+    const [lookupLoading, setLookupLoading] = useState(false);
+    const [lookupError, setLookupError] = useState('');
+
+    // Filter orders by search query
+    const filteredOrders = useMemo(() => {
+        if (!orderSearch.trim()) return orders;
+        const q = orderSearch.toLowerCase();
+        return orders.filter((order) => {
+            const ref = (order.pos_reference || order.name || '').toLowerCase();
+            return ref.includes(q);
+        });
+    }, [orders, orderSearch]);
 
     if (!show) return null;
+
+    // Lookup order by code via API (for orders not in local history)
+    const handleLookupOrder = async () => {
+        const code = orderSearch.trim();
+        if (!code) return;
+        setLookupLoading(true);
+        setLookupError('');
+        try {
+            if (!window.electronAPI) {
+                setLookupError('Chức năng chỉ khả dụng trên ứng dụng');
+                return;
+            }
+            const res = await window.electronAPI.executeKw(
+                'pos.order', 'search_read',
+                [[['config_id', '=', posConfig.id], ['name', '=', code]]],
+                {
+                    fields: ['id', 'name', 'date_order', 'partner_id', 'amount_total', 'amount_tax',
+                        'amount_paid', 'amount_return', 'state', 'pos_reference', 'lines',
+                        'session_id', 'user_id', 'statement_ids', 'picking_ids', 'currency_id', 'pricelist_id', 'note', 'table_id', 'ecommerce_code', 'return_order_id'],
+                    order: 'id desc',
+                    limit: 1,
+                }
+            );
+            console.log(res);
+            if (!res.success || !res.result || res.result.length === 0) {
+                setLookupError('Không tìm thấy đơn hàng với mã "' + code + '"');
+                return;
+            }
+            const order = res.result[0];
+            // Convert date same as getPosOrders
+            if (order.date_order) {
+                let date = new Date(order.date_order + ' Z');
+                date.setHours(date.getHours() + 7);
+                order.date_order = date.toISOString().replace('T', ' ').split('.')[0];
+            }
+            onViewDetail(order);
+        } catch (err) {
+            setLookupError(err.message || 'Có lỗi xảy ra khi tra cứu');
+        } finally {
+            setLookupLoading(false);
+        }
+    };
 
     const handleConfirmReturn = async () => {
         setProcessing(true);
@@ -75,8 +133,8 @@ function OrderHistoryPopup({
                     product_id: item.product_id[0],
                     qty: -item.qty,
                     price_unit: parseInt(item.price_unit),
-                    price_subtotal: parseInt(item.price_subtotal),
-                    price_subtotal_incl: parseInt(item.price_subtotal_incl),
+                    price_subtotal: -parseInt(item.price_subtotal),
+                    price_subtotal_incl: -parseInt(item.price_subtotal_incl),
                     // combo_item_ids: combo_item_ids,
                     discount_type: item.discount_type,
                     discount: item.discount,
@@ -108,10 +166,10 @@ function OrderHistoryPopup({
             const orderData = {
                 data: {
                     name: `Return/Order ${uidId}`,
-                    amount_paid: selectedOrder.amount_paid,
+                    amount_paid: -selectedOrder.amount_paid,
                     amount_return: 0,
-                    amount_tax: selectedOrder.amount_tax,
-                    amount_total: selectedOrder.amount_total,
+                    amount_tax: -selectedOrder.amount_tax,
+                    amount_total: -selectedOrder.amount_total,
                     creation_date: localISOTime,
                     fiscal_position_id: false,
                     lines: lines,
@@ -137,9 +195,15 @@ function OrderHistoryPopup({
             if (!res.success) {
                 throw new Error(res.error);
             }
+            // Show success
+            setReturnSuccess({
+                orderRef: selectedOrder.pos_reference || selectedOrder.name,
+            });
+            // Refresh stock
+            if (onRefreshStock) onRefreshStock();
         } catch (err) {
             console.error("Lỗi thanh toán:", err);
-            alert("Lỗi thanh toán: " + err.message);
+            setReturnError(err.message || 'Có lỗi xảy ra');
         } finally {
             setProcessing(false);
             setShowReturnConfirm(false);
@@ -224,32 +288,64 @@ function OrderHistoryPopup({
                         </div>
                     ) : !selectedOrder ? (
                         /* === Order list === */
-                        orders.length === 0 ? (
-                            <div className="history-popup-empty">
-                                <p>📭 Chưa có đơn hàng nào trong 7 ngày qua</p>
+                        <>
+                            {/* Search bar */}
+                            <div className="history-search">
+                                <input
+                                    type="text"
+                                    className="history-search-input"
+                                    placeholder="🔍 Tìm theo mã đơn..."
+                                    value={orderSearch}
+                                    onChange={(e) => { setOrderSearch(e.target.value); setLookupError(''); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleLookupOrder(); }}
+                                />
+                                {orderSearch && (
+                                    <button className="history-search-clear" onClick={() => { setOrderSearch(''); setLookupError(''); }}>✕</button>
+                                )}
+                                <button
+                                    className="btn btn-sm history-lookup-btn"
+                                    onClick={handleLookupOrder}
+                                    disabled={!orderSearch.trim() || lookupLoading}
+                                >
+                                    {lookupLoading ? (
+                                        <><span className="login-spinner" style={{ width: 14, height: 14 }}></span></>
+                                    ) : (
+                                        'Tra cứu'
+                                    )}
+                                </button>
                             </div>
-                        ) : (
-                            <div className="history-table">
-                                <div className="history-table-header">
-                                    <span className="ht-col ht-col-ref">Mã đơn</span>
-                                    <span className="ht-col ht-col-date">Ngày</span>
-                                    <span className="ht-col ht-col-customer">Khách hàng</span>
-                                    <span className="ht-col ht-col-total">Tổng tiền</span>
-                                    <span className="ht-col ht-col-state">Trạng thái</span>
+                            {lookupError && (
+                                <div className="history-lookup-error">
+                                    <span>⚠️ {lookupError}</span>
                                 </div>
-                                {orders.map((order) => (
-                                    <div key={order.id} className="history-table-row" onClick={() => onViewDetail(order)}>
-                                        <span className="ht-col ht-col-ref">{order.pos_reference || order.name}</span>
-                                        <span className="ht-col ht-col-date">{formatDate(order.date_order)}</span>
-                                        <span className="ht-col ht-col-customer">{getCustomerName(order.partner_id)}</span>
-                                        <span className="ht-col ht-col-total">{formatPrice(order.amount_total)}</span>
-                                        <span className={`ht-col ht-col-state ${getStateClass(order.state)}`}>
-                                            {getStateLabel(order.state)}
-                                        </span>
+                            )}
+                            {filteredOrders.length === 0 ? (
+                                <div className="history-popup-empty">
+                                    <p>{orderSearch.trim() ? '🔍 Không tìm thấy đơn hàng phù hợp' : '📭 Chưa có đơn hàng nào trong 7 ngày qua'}</p>
+                                </div>
+                            ) : (
+                                <div className="history-table">
+                                    <div className="history-table-header">
+                                        <span className="ht-col ht-col-ref">Mã đơn</span>
+                                        <span className="ht-col ht-col-date">Ngày</span>
+                                        <span className="ht-col ht-col-customer">Khách hàng</span>
+                                        <span className="ht-col ht-col-total">Tổng tiền</span>
+                                        <span className="ht-col ht-col-state">Trạng thái</span>
                                     </div>
-                                ))}
-                            </div>
-                        )
+                                    {filteredOrders.map((order) => (
+                                        <div key={order.id} className="history-table-row" onClick={() => onViewDetail(order)}>
+                                            <span className="ht-col ht-col-ref">{order.pos_reference || order.name}</span>
+                                            <span className="ht-col ht-col-date">{formatDate(order.date_order)}</span>
+                                            <span className="ht-col ht-col-customer">{getCustomerName(order.partner_id)}</span>
+                                            <span className="ht-col ht-col-total">{formatPrice(order.amount_total)}</span>
+                                            <span className={`ht-col ht-col-state ${getStateClass(order.state)}`}>
+                                                {getStateLabel(order.state)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     ) : (
                         /* === Order detail === */
                         <div className="history-detail">
@@ -257,9 +353,11 @@ function OrderHistoryPopup({
                                 <button className="btn btn-primary" onClick={handlePrintBill}>
                                     🖨️ In lại bill
                                 </button>
-                                <button className="btn btn-danger" onClick={() => setShowReturnConfirm(true)}>
-                                    🔄 Trả hàng
-                                </button>
+                                {!selectedOrder.return_order_id && (
+                                    <button className="btn btn-danger" onClick={() => setShowReturnConfirm(true)}>
+                                        🔄 Trả hàng
+                                    </button>
+                                )}
                             </div>
 
                             {/* Order info grid */}
@@ -333,8 +431,14 @@ function OrderHistoryPopup({
                         <div className="return-confirm-icon">⚠️</div>
                         <h3>Xác nhận trả hàng?</h3>
                         <p>Bạn có chắc chắn muốn trả lại đơn hàng <strong>{selectedOrder?.pos_reference || selectedOrder?.name}</strong> không?</p>
+                        {returnError && (
+                            <div className="return-error-bar">
+                                <span>⚠️ {returnError}</span>
+                                <button className="return-error-close" onClick={() => setReturnError('')}>✕</button>
+                            </div>
+                        )}
                         <div className="return-confirm-actions">
-                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShowReturnConfirm(false) }}>
+                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShowReturnConfirm(false); setReturnError(''); }}>
                                 Hủy
                             </button>
                             <button className="btn btn-danger" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleConfirmReturn() }}>
@@ -348,6 +452,25 @@ function OrderHistoryPopup({
                                 )}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Return Success Popup */}
+            {returnSuccess && (
+                <div className="return-success-overlay" onClick={() => { setReturnSuccess(null); onClose(); }}>
+                    <div className="return-success-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="return-success-icon-wrapper">
+                            <div className="return-success-icon">✓</div>
+                            <div className="return-success-ring"></div>
+                        </div>
+                        <h3 className="return-success-title">Trả hàng thành công!</h3>
+                        <p className="return-success-desc">
+                            Đơn hàng <strong>{returnSuccess.orderRef}</strong> đã được trả thành công
+                        </p>
+                        <button className="btn btn-primary return-success-btn" onClick={() => { setReturnSuccess(null); onClose(); }}>
+                            Đóng
+                        </button>
                     </div>
                 </div>
             )}

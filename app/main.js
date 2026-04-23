@@ -246,6 +246,17 @@ ipcMain.handle('odoo:getTables', async (event, configId) => {
     }
 });
 
+ipcMain.handle('odoo:getTransactionTypes', async (event) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const result = await OdooService.getTransactionTypes(url, db, uid, password);
+        return { success: true, result };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('odoo:executeKw', async (event, model, method, args, kwargs) => {
     if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
     try {
@@ -299,6 +310,17 @@ ipcMain.handle('odoo:createProductionOrder', async (event, productId, quantity, 
             productId, quantity, branchId, sessionId, materialIds, locationId, locationDestId, pickingTypeId
         );
         return { success: true, data: result };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('odoo:createInternalTransfer', async (event, pickingData) => {
+    if (!odooSession) return { success: false, error: 'Chưa đăng nhập' };
+    try {
+        const { url, db, uid, password } = odooSession;
+        const result = await OdooService.createInternalTransfer(url, db, uid, password, pickingData);
+        return { success: true, result };
     } catch (error) {
         return { success: false, error: error.message };
     }

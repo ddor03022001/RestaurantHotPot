@@ -387,6 +387,69 @@ ipcMain.handle('window:sendToCustomerDisplay', (event, data) => {
     return true;
 });
 
+// ========== Silent Print IPC ==========
+// Receives base64 PNG image data from renderer, saves to file, prints via PowerShell
+ipcMain.handle('window:silentPrint', async (event, base64ImageData, printerName) => {
+    const fs = require('fs');
+    const os = require('os');
+    const { exec } = require('child_process');
+    const ts = Date.now();
+    const tmpImg = path.join(os.tmpdir(), `hotpos_print_${ts}.png`);
+    const tmpPs1 = path.join(os.tmpdir(), `hotpos_print_${ts}.ps1`);
+
+    // Save base64 image to file
+    const imgBuffer = Buffer.from(base64ImageData, 'base64');
+    fs.writeFileSync(tmpImg, imgBuffer);
+    console.log('[PRINT] Image saved:', tmpImg, imgBuffer.length, 'bytes');
+
+    const psScript = `
+Add-Type -AssemblyName System.Drawing
+$img = [System.Drawing.Image]::FromFile('${tmpImg.replace(/\\/g, '\\\\')}')
+$pd = New-Object System.Drawing.Printing.PrintDocument
+$pd.PrinterSettings.PrinterName = '${printerName}'
+$pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
+$pd.add_PrintPage({
+    param($s, $e)
+    $ratio = $e.PageBounds.Width / $img.Width
+    $h = [int]($img.Height * $ratio)
+    $e.Graphics.DrawImage($img, 0, 0, [int]$e.PageBounds.Width, $h)
+    $e.HasMorePages = $false
+})
+$pd.Print()
+$pd.Dispose()
+$img.Dispose()
+`;
+    fs.writeFileSync(tmpPs1, psScript, 'utf-8');
+
+    return new Promise((resolve, reject) => {
+        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpPs1}"`, (error, stdout, stderr) => {
+            setTimeout(() => {
+                try { fs.unlinkSync(tmpImg); } catch (e) { /* ignore */ }
+                try { fs.unlinkSync(tmpPs1); } catch (e) { /* ignore */ }
+            }, 5000);
+
+            if (error) {
+                console.error('[PRINT] Error:', stderr || error.message);
+                reject(new Error(stderr || error.message));
+            } else {
+                console.log('[PRINT] Sent to:', printerName);
+                resolve(true);
+            }
+        });
+    });
+});
+
+ipcMain.handle('window:getPrinters', async () => {
+    try {
+        const printers = mainWindow.webContents.getPrintersAsync
+            ? await mainWindow.webContents.getPrintersAsync()
+            : mainWindow.webContents.getPrinters();
+        return printers.map(p => ({ name: p.name, isDefault: p.isDefault }));
+    } catch (err) {
+        return [];
+    }
+});
+
 // ========== App Lifecycle ==========
 
 app.whenReady().then(() => {

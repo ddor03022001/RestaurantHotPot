@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { formatPrice, formatDate, getStateLabel, getStateClass, getCustomerName, getProductName } from '../utils/formatters';
+import { printBill } from '../utils/printBill';
+import LabelPrintPopup from './LabelPrintPopup';
 import './OrderHistoryPopup.css';
 
 /**
@@ -20,6 +22,7 @@ import './OrderHistoryPopup.css';
  * @param {string} [props.posName] - POS name for print header (optional)
  * @param {object} [props.authData] - POS name for print header (optional)
  * @param {object} [props.posConfig] - POS name for print header (optional)
+ * @param {object} [props.posData] - POS data for print header (optional)
  */
 function OrderHistoryPopup({
     show,
@@ -35,6 +38,7 @@ function OrderHistoryPopup({
     posName = 'SeaPOS',
     authData,
     posConfig,
+    posData,
     onRefreshStock,
 }) {
     const [showReturnConfirm, setShowReturnConfirm] = useState(false);
@@ -44,7 +48,7 @@ function OrderHistoryPopup({
     const [orderSearch, setOrderSearch] = useState('');
     const [lookupLoading, setLookupLoading] = useState(false);
     const [lookupError, setLookupError] = useState('');
-
+    const [showLabelPopup, setShowLabelPopup] = useState(false);
     // Filter orders by search query
     const filteredOrders = useMemo(() => {
         if (!orderSearch.trim()) return orders;
@@ -122,7 +126,7 @@ function OrderHistoryPopup({
 
                 statementIds.push([0, 0, {
                     journal_id: pl.journal_id[0],
-                    amount: pl.amount,
+                    amount: -pl.amount,
                     name: new Date().toISOString().slice(0, 19).replace('T', ' '),
                     statement_id: statementId
                 }]);
@@ -195,6 +199,7 @@ function OrderHistoryPopup({
             if (!res.success) {
                 throw new Error(res.error);
             }
+            console.log(res);
             // Show success
             setReturnSuccess({
                 orderRef: selectedOrder.pos_reference || selectedOrder.name,
@@ -212,48 +217,33 @@ function OrderHistoryPopup({
 
     const handlePrintBill = () => {
         if (!selectedOrder) return;
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>In Bill Cũ</title>
-                <style>
-                    body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; color: #000; }
-                    h2 { text-align: center; margin-bottom: 5px; font-size: 1.2rem; }
-                    p { text-align: center; margin: 2px 0; font-size: 0.9rem; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-                    th, td { text-align: left; padding: 4px 0; border-bottom: 1px dashed #ccc; }
-                    th:last-child, td:last-child { text-align: right; }
-                    th:nth-child(2), td:nth-child(2) { text-align: center; }
-                    .grand-total { font-size: 1.2rem; font-weight: bold; margin-top: 10px; border-top: 2px dashed #000; padding-top: 10px; display: flex; justify-content: space-between; }
-                    @media print { .no-print { display: none; } }
-                </style>
-            </head>
-            <body>
-                <h2>${posName}</h2>
-                <p>HÓA ĐƠN BÁN HÀNG (IN LẠI)</p>
-                <p style="text-align:left">Mã đơn: ${selectedOrder.pos_reference || selectedOrder.name}</p>
-                <p style="text-align:left">Ngày: ${new Date(selectedOrder.date_order).toLocaleString('vi-VN')}</p>
-                <p style="text-align:left">KH: ${getCustomerName(selectedOrder.partner_id)}</p>
-                <table>
-                    <thead><tr><th>Món</th><th>SL</th><th>T.Tiền</th></tr></thead>
-                    <tbody>
-                        ${orderLines.map(line => `
-                            <tr>
-                                <td>${getProductName(line.product_id)}</td>
-                                <td>${line.qty}</td>
-                                <td>${new Intl.NumberFormat('vi-VN').format(Math.round(line.price_subtotal_incl))}đ</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                <div class="grand-total"><span>TỔNG CỘNG</span><span>${new Intl.NumberFormat('vi-VN').format(Math.round(selectedOrder.amount_total))}đ</span></div>
-                <script>setTimeout(() => window.print(), 500);</script>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
+        const orderDate = new Date(selectedOrder.date_order);
+        printBill({
+            storeName: posConfig?.name || posName,
+            billTitle: 'HÓA ĐƠN BÁN HÀNG',
+            orderRef: `Order ${selectedOrder.pos_reference || selectedOrder.name}`,
+            dateStr: `${orderDate.toLocaleDateString('vi-VN')} ${orderDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
+            customerName: getCustomerName(selectedOrder.partner_id),
+            lines: orderLines.map(line => ({
+                name: getProductName(line.product_id),
+                priceUnit: line.price_unit,
+                qty: line.qty,
+                discount: line.discount || 0,
+                subtotal: Math.round(line.price_subtotal_incl),
+                uom: line.uom_id ? line.uom_id[1] : 'Cái',
+            })),
+            totalAmount: Math.round(selectedOrder.amount_total),
+            discountAmount: 0,
+            note: selectedOrder.note || '',
+            ecommerceCode: selectedOrder.ecommerce_code || '',
+        });
     };
+
+    const getPrintProductLabel = (productId) => {
+        const product = posData.products.find(p => p.id === productId);
+        if (!product || !product.print_product_label) return false;
+        return true;
+    }
 
     return (
         <div className="order-popup-overlay" onClick={onClose}>
@@ -352,6 +342,9 @@ function OrderHistoryPopup({
                             <div className="history-detail-actions">
                                 <button className="btn btn-primary" onClick={handlePrintBill}>
                                     🖨️ In lại bill
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => setShowLabelPopup(true)} disabled={orderLines.length === 0}>
+                                    🏷️ In lại tem
                                 </button>
                                 {!selectedOrder.return_order_id && (
                                     <button className="btn btn-danger" onClick={() => setShowReturnConfirm(true)}>
@@ -474,6 +467,25 @@ function OrderHistoryPopup({
                     </div>
                 </div>
             )}
+
+            {/* Label Print Popup */}
+            <LabelPrintPopup
+                show={showLabelPopup}
+                onClose={() => setShowLabelPopup(false)}
+                orderItems={orderLines.map(line => ({
+                    lineId: line.id,
+                    product: {
+                        id: line.product_id[0],
+                        name: getProductName(line.product_id),
+                        display_name: getProductName(line.product_id),
+                        print_product_label: getPrintProductLabel(line.product_id[0]),
+                    },
+                    quantity: Math.abs(line.qty),
+                    note: line.note || '',
+                }))}
+                posConfig={posConfig}
+                ecommerceCode={selectedOrder?.pos_reference || selectedOrder?.name || ''}
+            />
         </div>
     );
 }

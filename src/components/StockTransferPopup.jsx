@@ -120,6 +120,9 @@ function StockTransferPopup({ show, onClose, products = [], posData = {}, posCon
             if (!res.success) {
                 throw new Error(res.error);
             }
+            if (res.result === false) {
+                throw new Error("Có lỗi xảy ra trong quá trình chuyển kho.");
+            }
             console.log(res);
             // Show success
             setSuccessResult({

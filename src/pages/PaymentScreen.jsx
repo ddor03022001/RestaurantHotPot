@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { formatPrice } from '../utils/formatters';
+import { printBill } from '../utils/printBill';
+import { printLabel } from '../utils/printLabel';
 import LabelPrintPopup from '../components/LabelPrintPopup';
 import './PaymentScreen.css';
 
@@ -76,7 +78,6 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [activePaymentIdx, setActivePaymentIdx] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [completed, setCompleted] = useState(false);
-    const [showPrintBill, setShowPrintBill] = useState(false);
 
     // Note and Ecommerce Code
     const [note, setNote] = useState(table.note || '');
@@ -89,6 +90,10 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [showLabelPopup, setShowLabelPopup] = useState(false);
     const [selectedSeller, setSelectedSeller] = useState(null);
     const [showSellerPopup, setShowSellerPopup] = useState(false);
+
+    const [selectedInvoiceCustomer, setSelectedInvoiceCustomer] = useState(null);
+    const [showInvoiceCustomerPopup, setShowInvoiceCustomerPopup] = useState(false);
+    const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
 
     // Calculate item total after per-item discount
     const getItemTotal = (item) => {
@@ -362,7 +367,9 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     table_id: posMode === 'retail' ? false : table.id,
                     currency_id: posConfig.currency_id[0],
                     uid: uidId,
-                    user_id: selectedSeller?.id || authData.user.uid
+                    user_id: selectedSeller?.id || authData.user.uid,
+                    is_get_invoice: selectedInvoiceCustomer ? true : false,
+                    invoice_address: selectedInvoiceCustomer ? selectedInvoiceCustomer.id : false
                 },
                 id: uidId,
                 to_invoice: true
@@ -374,6 +381,16 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             }
 
             setCompleted(true);
+
+            // Auto-print bill after successful payment
+            doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
+
+            // Auto-print labels after successful payment
+            printLabel({
+                posName: posConfig?.name || 'SeaPOS',
+                orderItems,
+                ecommerceCode: `Order ${uidId}`,
+            });
         } catch (err) {
             console.error("Lỗi thanh toán:", err);
             alert("Lỗi thanh toán: " + err.message);
@@ -385,6 +402,32 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const handleDone = () => {
         if (onRefreshStock) onRefreshStock();
         onComplete();
+    };
+
+    // Centralized bill print helper
+    const doPrintBill = (billTitle, refStr) => {
+        const now = new Date();
+        const totalDiscount = totalItemDiscounts + billDiscountAmount + pointsDeduction;
+        printBill({
+            storeName: posConfig?.name || 'SeaPOS',
+            billTitle,
+            orderRef: refStr,
+            dateStr: `${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
+            customerName: selectedCustomer?.name || '',
+            staffName: selectedSeller?.name || '',
+            lines: orderItems.map(item => ({
+                name: item.product.display_name || item.product.name,
+                priceUnit: getProductPrice(item.product),
+                qty: item.quantity,
+                discount: item.discount?.type === 'percent' ? item.discount.value : 0,
+                subtotal: getItemTotal(item),
+                uom: item.product.uom_id ? item.product.uom_id[1] : 'Cái',
+            })),
+            totalAmount: orderTotal,
+            discountAmount: totalDiscount,
+            note: note || '',
+            ecommerceCode: ecommerceCode || '',
+        });
     };
 
     if (completed) {
@@ -454,7 +497,13 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         <p className="payment-header-meta">{posConfig.name} • {authData.user.name}</p>
                     </div>
                 </div>
-                <div className="payment-header-right">
+                <div className="payment-header-right" style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        className={`btn ${selectedInvoiceCustomer ? 'btn-success' : 'btn-secondary'} seller-select-btn`}
+                        onClick={() => setShowInvoiceCustomerPopup(true)}
+                    >
+                        {selectedInvoiceCustomer ? `🏢 ${selectedInvoiceCustomer.name}` : '🏢 Hóa đơn công ty'}
+                    </button>
                     <button
                         className={`btn ${selectedSeller ? 'btn-success' : 'btn-warning'} seller-select-btn`}
                         onClick={() => setShowSellerPopup(true)}
@@ -728,7 +777,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         <div className="payment-actions-row">
                             <button
                                 className="btn btn-secondary payment-print-btn"
-                                onClick={() => setShowPrintBill(true)}
+                                onClick={() => doPrintBill('HÓA ĐƠN BÁN HÀNG', 'Tạm Tính')}
                                 disabled={orderItems.length === 0}
                             >
                                 🧾 In bill tạm tính
@@ -752,109 +801,6 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 </div>
             </div>
 
-            {/* Print Bill Popup */}
-            {showPrintBill && (
-                <div className="popup-overlay" onClick={() => setShowPrintBill(false)}>
-                    <div className="print-bill-popup" onClick={(e) => e.stopPropagation()}>
-                        <div className="print-bill-actions no-print">
-                            <button className="btn btn-primary" onClick={() => window.print()}>
-                                🖨️ In
-                            </button>
-                            <button className="btn btn-secondary" onClick={() => setShowPrintBill(false)}>
-                                Đóng
-                            </button>
-                        </div>
-                        <div className="print-bill-receipt" id="print-receipt">
-                            <div className="receipt-header">
-                                <h2 className="receipt-shop-name">{posConfig?.name || 'SeaPOS'}</h2>
-                                <p className="receipt-sub">BILL TẠM TÍNH</p>
-                                <p className="receipt-info">{isRetail ? 'Bán lẻ' : `Bàn ${table.number}`}</p>
-                                <p className="receipt-info">{new Date().toLocaleString('vi-VN')}</p>
-                                {selectedCustomer && (
-                                    <p className="receipt-info">KH: {selectedCustomer.name}</p>
-                                )}
-                                <p className="receipt-info">NV: {authData?.user?.name}</p>
-                                {note && <p className="receipt-info"><strong>Ghi chú:</strong> {note}</p>}
-                                {ecommerceCode && <p className="receipt-info"><strong>TMĐT Code:</strong> {ecommerceCode}</p>}
-                            </div>
-                            <div className="receipt-divider">--------------------------------</div>
-                            <table className="receipt-table">
-                                <thead>
-                                    <tr>
-                                        <th className="receipt-th-name">Món</th>
-                                        <th className="receipt-th-qty">SL</th>
-                                        <th className="receipt-th-price">T.Tiền</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {orderItems.map((item, idx) => {
-                                        const itemTotal = getItemTotal(item);
-                                        const rawLineTotal = getProductPrice(item.product) * item.quantity;
-                                        const hasDiscount = itemTotal < rawLineTotal;
-
-                                        return (
-                                            <React.Fragment key={idx}>
-                                                <tr>
-                                                    <td>{item.product.display_name || item.product.name}</td>
-                                                    <td className="receipt-td-center">{item.quantity}</td>
-                                                    <td className="receipt-td-right">
-                                                        {hasDiscount && (
-                                                            <span style={{ textDecoration: 'line-through', color: '#888', marginRight: '4px', fontSize: '0.9em' }}>
-                                                                {formatPrice(rawLineTotal)}
-                                                            </span>
-                                                        )}
-                                                        <span>{formatPrice(itemTotal)}</span>
-                                                    </td>
-                                                </tr>
-                                                {item.note && item.note.trim() && (
-                                                    <tr>
-                                                        <td colSpan="3" style={{ fontSize: '0.85em', fontStyle: 'italic', paddingLeft: '8px', color: '#555' }}>
-                                                            📝 {item.note}
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                            <div className="receipt-divider">--------------------------------</div>
-                            <div className="receipt-totals">
-                                <div className="receipt-total-row">
-                                    <span>Tạm tính</span>
-                                    <span>{formatPrice(rawTotal)}</span>
-                                </div>
-                                {totalItemDiscounts > 0 && (
-                                    <div className="receipt-total-row">
-                                        <span>CK từng món</span>
-                                        <span>-{formatPrice(totalItemDiscounts)}</span>
-                                    </div>
-                                )}
-                                {billDiscountAmount > 0 && (
-                                    <div className="receipt-total-row">
-                                        <span>CK tổng bill</span>
-                                        <span>-{formatPrice(billDiscountAmount)}</span>
-                                    </div>
-                                )}
-                                {pointsDeduction > 0 && (
-                                    <div className="receipt-total-row">
-                                        <span>Điểm ({localUsedPoints})</span>
-                                        <span>-{formatPrice(pointsDeduction)}</span>
-                                    </div>
-                                )}
-                                <div className="receipt-divider">================================</div>
-                                <div className="receipt-total-row receipt-grand-total">
-                                    <span>TỔNG CỘNG</span>
-                                    <span>{formatPrice(orderTotal)}</span>
-                                </div>
-                            </div>
-                            <div className="receipt-divider">--------------------------------</div>
-                            <p className="receipt-footer">Bill tạm tính - Chưa thanh toán</p>
-                            <p className="receipt-footer">Cảm ơn quý khách!</p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Note Popup */}
             {showNotePopup && (
@@ -915,10 +861,93 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 show={showLabelPopup}
                 onClose={() => setShowLabelPopup(false)}
                 orderItems={orderItems}
-                getProductPrice={getProductPrice}
                 posConfig={posConfig}
                 ecommerceCode={ecommerceCode}
             />
+
+            {/* Invoice Customer Selection Popup */}
+            {showInvoiceCustomerPopup && (
+                <div className="popup-overlay" onClick={() => setShowInvoiceCustomerPopup(false)}>
+                    <div className="popup-card invoice-popup-card slide-up" style={{ maxWidth: '700px', width: '95%', height: '80%' }} onClick={e => e.stopPropagation()}>
+                        <div className="invoice-popup-header">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    👤 Chọn khách hàng
+                                </h3>
+                                <button style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '32px', height: '32px', borderRadius: '8px', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowInvoiceCustomerPopup(false)}>✕</button>
+                            </div>
+                        </div>
+
+                        <div className="invoice-search-wrapper">
+                            <div className="invoice-search-container">
+                                <span className="invoice-search-icon">🔍</span>
+                                <input
+                                    type="text"
+                                    className="invoice-search-input"
+                                    placeholder="Tìm khách hàng..."
+                                    value={invoiceSearchQuery}
+                                    onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className="invoice-table-header">
+                            <div className="invoice-th">TÊN</div>
+                            <div className="invoice-th">MST</div>
+                            <div className="invoice-th">EMAIL</div>
+                        </div>
+
+                        <div className="invoice-list">
+                            {(posData.customers || [])
+                                .filter(c => c.company_type === 'company')
+                                .filter(c => {
+                                    const q = invoiceSearchQuery.toLowerCase();
+                                    return (c.name || '').toLowerCase().includes(q) || (c.vat || '').toLowerCase().includes(q);
+                                })
+                                .map((customer) => (
+                                    <div
+                                        key={customer.id}
+                                        className={`invoice-row ${selectedInvoiceCustomer?.id === customer.id ? 'invoice-row-active' : ''}`}
+                                        onClick={() => {
+                                            setSelectedInvoiceCustomer(customer);
+                                            setShowInvoiceCustomerPopup(false);
+                                        }}
+                                    >
+                                        <div className="invoice-cell-name">{customer.name}</div>
+                                        <div className="invoice-cell-detail">{customer.vat || '—'}</div>
+                                        <div className="invoice-cell-detail">{customer.email || '—'}</div>
+
+                                        {selectedInvoiceCustomer?.id === customer.id && (
+                                            <div className="invoice-check-icon">✓</div>
+                                        )}
+                                    </div>
+                                ))}
+
+                            {(posData.customers || []).filter(c => c.company_type === 'company').length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                                    Không tìm thấy dữ liệu khách hàng công ty
+                                </div>
+                            )}
+                        </div>
+
+                        {selectedInvoiceCustomer && (
+                            <div style={{ padding: '15px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                <button
+                                    className="btn btn-danger"
+                                    style={{ width: '100%', borderRadius: '12px', padding: '12px' }}
+                                    onClick={() => {
+                                        setSelectedInvoiceCustomer(null);
+                                        setShowInvoiceCustomerPopup(false);
+                                    }}
+                                >
+                                    🗑️ Bỏ chọn khách hàng
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Seller Selection Popup */}
             {showSellerPopup && (

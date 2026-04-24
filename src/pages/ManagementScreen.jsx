@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { formatPrice, formatDate, getStateLabel } from '../utils/formatters';
+import { printBill } from '../utils/printBill';
 import './ManagementScreen.css';
 
 const menuItems = [
@@ -46,6 +47,13 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
 
     // Report export state
     const [exporting, setExporting] = useState(false);
+
+    // Printer settings state
+    const [printers, setPrinters] = useState([]);
+    const [selectedPrinter, setSelectedPrinter] = useState(localStorage.getItem('billPrinterName') || '');
+    const [selectedLabelPrinter, setSelectedLabelPrinter] = useState(localStorage.getItem('labelPrinterName') || '');
+    const [printersLoading, setPrintersLoading] = useState(false);
+    const [testPrintDone, setTestPrintDone] = useState(false);
 
     // Fetch all orders (30 days) once on mount
     const fetchAllData = useCallback(async () => {
@@ -562,6 +570,173 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
         );
     };
 
+    // ===== Render Settings =====
+    const fetchPrinters = async () => {
+        setPrintersLoading(true);
+        try {
+            if (window.electronAPI && window.electronAPI.getPrinters) {
+                const list = await window.electronAPI.getPrinters();
+                setPrinters(list || []);
+            }
+        } catch (err) {
+            console.error('Failed to load printers:', err);
+        } finally {
+            setPrintersLoading(false);
+        }
+    };
+
+    const handleSelectPrinter = (name) => {
+        setSelectedPrinter(name);
+        localStorage.setItem('billPrinterName', name);
+        setTestPrintDone(false);
+    };
+
+    const handleClearPrinter = () => {
+        setSelectedPrinter('');
+        localStorage.removeItem('billPrinterName');
+        setTestPrintDone(false);
+    };
+
+    const handleSelectLabelPrinter = (name) => {
+        setSelectedLabelPrinter(name);
+        localStorage.setItem('labelPrinterName', name);
+    };
+
+    const handleClearLabelPrinter = () => {
+        setSelectedLabelPrinter('');
+        localStorage.removeItem('labelPrinterName');
+    };
+
+    const handleTestPrint = async () => {
+        await printBill({
+            storeName: posConfig?.name || 'SeaPOS',
+            billTitle: 'IN THỬ MÁY IN',
+            orderRef: 'TEST-001',
+            dateStr: new Date().toLocaleString('vi-VN'),
+            customerName: 'Khách thử nghiệm',
+            staffName: authData?.user?.name || 'Admin',
+            lines: [
+                { name: 'Sản phẩm mẫu A', priceUnit: 50000, qty: 2, discount: 0, subtotal: 100000, uom: 'Cái' },
+                { name: 'Sản phẩm mẫu B', priceUnit: 30000, qty: 1, discount: 10, subtotal: 27000, uom: 'Kg' },
+            ],
+            totalAmount: 127000,
+            discountAmount: 3000,
+        });
+        setTestPrintDone(true);
+        setTimeout(() => setTestPrintDone(false), 3000);
+    };
+
+    const renderSettings = () => (
+        <div className="mgmt-settings fade-in">
+            <div className="mgmt-date-bar">
+                <h2 className="mgmt-section-title">⚙️ Cài đặt</h2>
+            </div>
+
+            {/* Printer Settings */}
+            <div className="mgmt-settings-section glass-card">
+                <h3 className="mgmt-card-title">🖨️ Máy in Bill</h3>
+                <p className="mgmt-settings-desc">
+                    Chọn máy in để in bill trực tiếp (không hiển popup). Nếu không chọn, hệ thống sẽ mở cửa sổ in của trình duyệt.
+                </p>
+
+                <div className="mgmt-printer-controls">
+                    <div className="mgmt-printer-select-row">
+                        <select
+                            className="input-field mgmt-printer-dropdown"
+                            value={selectedPrinter}
+                            onChange={(e) => handleSelectPrinter(e.target.value)}
+                            onFocus={() => { if (printers.length === 0) fetchPrinters(); }}
+                        >
+                            <option value="">🖨️ -- Chọn máy in --</option>
+                            {printers.map((p) => (
+                                <option key={p.name} value={p.name}>
+                                    {p.name} {p.isDefault ? '(★ Mặc định)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={fetchPrinters}
+                            disabled={printersLoading}
+                            title="Làm mới danh sách máy in"
+                        >
+                            {printersLoading ? '⏳' : '🔄'}
+                        </button>
+                    </div>
+
+                    {selectedPrinter && (
+                        <div className="mgmt-printer-status">
+                            <div className="mgmt-printer-current">
+                                <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedPrinter}</strong></span>
+                                <button className="btn btn-sm btn-danger" onClick={handleClearPrinter}>✕ Xóa</button>
+                            </div>
+                            <div className="mgmt-printer-actions">
+                                <button className="btn btn-primary" onClick={handleTestPrint}>
+                                    {testPrintDone ? '✅ Đã gửi lệnh in!' : '🧪 In thử'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!selectedPrinter && (
+                        <div className="mgmt-printer-hint">
+                            ℹ️ Chưa chọn máy in. Bill sẽ hiển popup in của trình duyệt khi in.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Label Printer Settings */}
+            <div className="mgmt-settings-section glass-card">
+                <h3 className="mgmt-card-title">🏷️ Máy in Tem</h3>
+                <p className="mgmt-settings-desc">
+                    Chọn máy in để in tem sản phẩm tự động sau khi thanh toán. Nếu không chọn, hệ thống sẽ mở cửa sổ in của trình duyệt.
+                </p>
+
+                <div className="mgmt-printer-controls">
+                    <div className="mgmt-printer-select-row">
+                        <select
+                            className="input-field mgmt-printer-dropdown"
+                            value={selectedLabelPrinter}
+                            onChange={(e) => handleSelectLabelPrinter(e.target.value)}
+                            onFocus={() => { if (printers.length === 0) fetchPrinters(); }}
+                        >
+                            <option value="">🏷️ -- Chọn máy in tem --</option>
+                            {printers.map((p) => (
+                                <option key={p.name} value={p.name}>
+                                    {p.name} {p.isDefault ? '(★ Mặc định)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={fetchPrinters}
+                            disabled={printersLoading}
+                            title="Làm mới danh sách máy in"
+                        >
+                            {printersLoading ? '⏳' : '🔄'}
+                        </button>
+                    </div>
+
+                    {selectedLabelPrinter && (
+                        <div className="mgmt-printer-status">
+                            <div className="mgmt-printer-current">
+                                <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedLabelPrinter}</strong></span>
+                                <button className="btn btn-sm btn-danger" onClick={handleClearLabelPrinter}>✕ Xóa</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!selectedLabelPrinter && (
+                        <div className="mgmt-printer-hint">
+                            ℹ️ Chưa chọn máy in tem. Tem sẽ hiển popup in của trình duyệt.
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
     // ===== Placeholders =====
     const renderPlaceholder = (icon, title, desc) => (
         <div className="mgmt-placeholder fade-in">
@@ -584,7 +759,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
             case 'products': return renderPlaceholder('📦', 'Quản lý sản phẩm', 'Thêm, sửa, xóa sản phẩm, quản lý danh mục, giá bán, tồn kho');
             case 'customers': return renderPlaceholder('👥', 'Quản lý khách hàng', 'Danh sách khách hàng, điểm tích lũy, lịch sử mua hàng');
             case 'employees': return renderPlaceholder('🧑‍💼', 'Quản lý nhân viên', 'Phân quyền, ca làm việc, hiệu suất bán hàng');
-            case 'settings': return renderPlaceholder('⚙️', 'Cài đặt', 'Cấu hình POS, máy in, thiết bị ngoại vi, giao diện');
+            case 'settings': return renderSettings();
             default: return renderDashboard();
         }
     };

@@ -718,3 +718,87 @@
     font-weight: 700;
     margin-top: 8px;
 }
+
+/* ===== Settings ===== */
+.mgmt-settings-section {
+    margin: 0 28px 20px;
+    padding: 24px;
+    border-radius: var(--radius-md) !important;
+}
+
+.mgmt-settings-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.mgmt-printer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mgmt-printer-select-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.mgmt-printer-dropdown {
+    flex: 1;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-primary) !important;
+    cursor: pointer;
+    appearance: auto;
+}
+
+.mgmt-printer-dropdown:focus {
+    border-color: var(--accent-primary) !important;
+    outline: none;
+}
+
+.mgmt-printer-dropdown option {
+    background: #1e293b;
+    color: #f9fafb;
+}
+
+.mgmt-printer-status {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    border-radius: 10px;
+}
+
+.mgmt-printer-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mgmt-printer-badge {
+    font-size: 13px;
+    color: var(--accent-primary);
+}
+
+.mgmt-printer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.mgmt-printer-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+}

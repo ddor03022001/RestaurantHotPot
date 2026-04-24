@@ -204,7 +204,7 @@ class OdooService {
         const products = await OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'type', 'image_medium', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids', 'print_product_label'],
+                fields: ['id', 'name', 'type', 'image_medium', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids', 'print_product_label', 'uom_id'],
             }
         );
 
@@ -338,7 +338,7 @@ class OdooService {
         customers = await OdooService._execute(url, db, uid, password, 'res.partner', 'search_read',
             [[['customer', '=', true]]],
             {
-                fields: ['id', 'name', 'phone', 'mobile', 'email', 'street', 'group_ids', 'pos_loyalty_point'],
+                fields: ['id', 'name', 'phone', 'mobile', 'email', 'street', 'group_ids', 'pos_loyalty_point', 'company_type', 'vat'],
             }
         );
         const groups = await OdooService._execute(url, db, uid, password, 'res.partner.group', 'search_read',
@@ -503,7 +503,7 @@ class OdooService {
             [[['id', 'in', lineIds]]],
             {
                 fields: ['id', 'order_id', 'product_id', 'qty', 'price_unit',
-                    'price_subtotal', 'price_subtotal_incl', 'discount_type', 'discount', 'discount_amount'],
+                    'price_subtotal', 'price_subtotal_incl', 'discount_type', 'discount', 'discount_amount', 'uom_id'],
             }
         );
     }

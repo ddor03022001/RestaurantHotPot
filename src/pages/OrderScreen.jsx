@@ -1441,6 +1441,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 posName={posConfig?.name}
                 authData={authData}
                 posConfig={posConfig}
+                posData={posData}
                 onRefreshStock={onRefreshStock}
             />
 

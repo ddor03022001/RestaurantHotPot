@@ -118,7 +118,7 @@ const BARCODE_LABEL_STYLES = `
     }
 `;
 
-function LabelPrintPopup({ show, onClose, orderItems, getProductPrice, posConfig, ecommerceCode }) {
+function LabelPrintPopup({ show, onClose, orderItems, posConfig, ecommerceCode }) {
     if (!show) return null;
 
     const totalLabelsCount = orderItems.reduce((s, i) => s + (i.product.print_product_label ? i.quantity : 0), 0);

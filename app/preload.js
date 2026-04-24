@@ -93,4 +93,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Get API QR Code
     getApiQrCode: (totalAmount) =>
         ipcRenderer.invoke('get-api-qrcode', totalAmount),
+
+    // Silent print (bill printer)
+    silentPrint: (htmlContent, printerName) =>
+        ipcRenderer.invoke('window:silentPrint', htmlContent, printerName),
+
+    // Get available printers
+    getPrinters: () =>
+        ipcRenderer.invoke('window:getPrinters'),
 });

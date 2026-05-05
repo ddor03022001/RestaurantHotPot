@@ -386,6 +386,7 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                 posName={posConfig?.name}
                 authData={authData}
                 posConfig={posConfig}
+                posData={posData}
             />
             {/* Merge Popup */}
             {showMergePopup && (

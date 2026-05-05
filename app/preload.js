@@ -101,4 +101,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Get available printers
     getPrinters: () =>
         ipcRenderer.invoke('window:getPrinters'),
+
+    printSilentHtml: (htmlContent, printerName) => ipcRenderer.send('print-silent-html', htmlContent, printerName),
 });

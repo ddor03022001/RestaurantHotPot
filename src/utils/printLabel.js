@@ -19,12 +19,11 @@ const LABEL_STYLES = `
     .product-label {
         width: 50mm;
         height: 30mm;
-        border: 0.1mm solid #eee;
         position: relative;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
-        padding: 1.5mm 2mm;
+        padding: 1mm 1mm;
         page-break-inside: avoid;
         background: #fff;
         overflow: hidden;
@@ -141,7 +140,7 @@ export function generateLabelHTML({ posName = 'SeaPOS', orderItems = [], ecommer
     for (const item of printableItems) {
         for (let i = 0; i < item.quantity; i++) {
             globalSerial++;
-            const productName = item.product.display_name || item.product.name || '';
+            const productName = item.product.name || item.product.display_name || '';
             const note = item.note || '';
 
             labelsHTML += `
@@ -196,6 +195,18 @@ export async function printLabel(options) {
 
     const html = generateLabelHTML(options);
     const printerName = localStorage.getItem('labelPrinterName') || '';
+
+    if (printerName && window.electronAPI && window.electronAPI.printSilentHtml) {
+        // Chạy trong Electron -> In silent
+        window.electronAPI.printSilentHtml(html, printerName);
+
+    } else {
+        // Fallback: Nếu chạy trên trình duyệt web bình thường
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        printWindow.document.write(html + `<script>window.onload = function() { window.print(); window.close(); }<\/script>`);
+        printWindow.document.close();
+    }
+    return;
 
     // Silent print via html2canvas + PowerShell
     if (printerName && window.electronAPI && window.electronAPI.silentPrint) {

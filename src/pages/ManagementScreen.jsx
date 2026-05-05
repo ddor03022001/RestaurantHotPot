@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { formatPrice, formatDate, getStateLabel } from '../utils/formatters';
 import { printBill } from '../utils/printBill';
+import { printLabel } from '../utils/printLabel';
 import './ManagementScreen.css';
 
 const menuItems = [
@@ -54,6 +55,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
     const [selectedLabelPrinter, setSelectedLabelPrinter] = useState(localStorage.getItem('labelPrinterName') || '');
     const [printersLoading, setPrintersLoading] = useState(false);
     const [testPrintDone, setTestPrintDone] = useState(false);
+    const [testLabelPrintDone, setTestLabelPrintDone] = useState(false);
 
     // Fetch all orders (30 days) once on mount
     const fetchAllData = useCallback(async () => {
@@ -626,6 +628,22 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
         setTimeout(() => setTestPrintDone(false), 3000);
     };
 
+    const handleTestLabelPrint = async () => {
+        await printLabel({
+            posName: posConfig?.name || 'SeaPOS',
+            orderItems: [
+                {
+                    product: { name: 'Sản phẩm mẫu A', print_product_label: true },
+                    quantity: 1,
+                    note: 'Ghi chú thử nghiệm',
+                },
+            ],
+            ecommerceCode: 'TEST-001',
+        });
+        setTestLabelPrintDone(true);
+        setTimeout(() => setTestLabelPrintDone(false), 3000);
+    };
+
     const renderSettings = () => (
         <div className="mgmt-settings fade-in">
             <div className="mgmt-date-bar">
@@ -723,6 +741,11 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
                             <div className="mgmt-printer-current">
                                 <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedLabelPrinter}</strong></span>
                                 <button className="btn btn-sm btn-danger" onClick={handleClearLabelPrinter}>✕ Xóa</button>
+                            </div>
+                            <div className="mgmt-printer-actions">
+                                <button className="btn btn-primary" onClick={handleTestLabelPrint}>
+                                    {testLabelPrintDone ? '✅ Đã gửi lệnh in!' : '🧪 In thử tem'}
+                                </button>
                             </div>
                         </div>
                     )}

@@ -23,7 +23,7 @@ function PopupOverlay({ show, onClose, title, className, children }) {
     );
 }
 
-function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment, posMode, onToggleMode, onCloseSession, onGoToManagement, onRefreshStock }) {
+function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment, posMode, onToggleMode, onCloseSession, onGoToManagement, onRefreshStock, offlineQueue }) {
     const isRetail = posMode === 'retail';
     const { products = [], categories = [], customers = [], pricelists = [], promotions = [], defaultPricelistId = null } = posData || {};
     const [orderItems, setOrderItems] = useState(table.orderItems || []);
@@ -61,6 +61,19 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
     // Stock transfer popup state
     const [showStockTransfer, setShowStockTransfer] = useState(false);
+
+    // Offline queue popup state
+    const [showOfflineQueuePopup, setShowOfflineQueuePopup] = useState(false);
+    const [retryResult, setRetryResult] = useState(null);
+
+    const handleRetryOfflineOrders = async () => {
+        if (!offlineQueue || offlineQueue.isRetrying) return;
+        setRetryResult(null);
+        const result = await offlineQueue.retryAll();
+        setRetryResult(result);
+        // Auto-hide result after 5 seconds
+        setTimeout(() => setRetryResult(null), 5000);
+    };
 
     const [customerDisplayOn, setCustomerDisplayOn] = useState(false);
     const toggleCustomerDisplay = () => {
@@ -711,6 +724,17 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 </div>
 
                 <div className="order-header-right">
+                    {/* Offline Queue Button */}
+                    <button
+                        className={`btn order-header-btn offline-queue-btn ${offlineQueue && offlineQueue.count > 0 ? 'offline-queue-btn-error' : 'offline-queue-btn-clear'}`}
+                        onClick={() => setShowOfflineQueuePopup(true)}
+                        title={offlineQueue && offlineQueue.count > 0 ? `${offlineQueue.count} đơn chưa đồng bộ` : 'Tất cả đơn đã đồng bộ'}
+                    >
+                        {offlineQueue && offlineQueue.count > 0 ? '⚠️' : '✅'} Đồng bộ
+                        {offlineQueue && offlineQueue.count > 0 && (
+                            <span className="offline-queue-badge">{offlineQueue.count}</span>
+                        )}
+                    </button>
                     <button className="btn btn-secondary order-header-btn" onClick={onGoToManagement}>
                         📊 Quản lý
                     </button>
@@ -1493,6 +1517,99 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 posConfig={posConfig}
                 onRefreshStock={onRefreshStock}
             />
+
+            {/* ===== Offline Queue Popup ===== */}
+            {showOfflineQueuePopup && (
+                <div className="order-popup-overlay" onClick={() => setShowOfflineQueuePopup(false)}>
+                    <div className="order-popup offline-queue-popup" style={{ padding: '15px' }} onClick={(e) => e.stopPropagation()}>
+                        <div className="order-popup-header">
+                            <h3 className="order-popup-title">
+                                {offlineQueue && offlineQueue.count > 0 ? '⚠️' : '✅'} Đồng bộ đơn hàng
+                            </h3>
+                            <button className="order-popup-close" onClick={() => setShowOfflineQueuePopup(false)}>✕</button>
+                        </div>
+                        <div className="order-popup-body">
+                            {retryResult && (
+                                <div className="offline-queue-result">
+                                    <span className="offline-queue-result-success">✅ {retryResult.success} đơn thành công</span>
+                                    {retryResult.failed > 0 && (
+                                        <span className="offline-queue-result-fail">❌ {retryResult.failed} đơn thất bại</span>
+                                    )}
+                                </div>
+                            )}
+
+                            {(!offlineQueue || offlineQueue.count === 0) && !retryResult && (
+                                <div className="offline-queue-empty">
+                                    <div className="offline-queue-empty-icon">✅</div>
+                                    <p>Tất cả đơn hàng đã được đồng bộ thành công!</p>
+                                </div>
+                            )}
+
+                            {offlineQueue && offlineQueue.count > 0 && (
+                                <>
+                                    <div className="offline-queue-summary">
+                                        <span>📋 {offlineQueue.count} đơn hàng chưa đồng bộ</span>
+                                        <div className="offline-queue-actions-top">
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={handleRetryOfflineOrders}
+                                                disabled={offlineQueue.isRetrying}
+                                            >
+                                                {offlineQueue.isRetrying ? (
+                                                    <><span className="login-spinner"></span> Đang gửi...</>
+                                                ) : (
+                                                    <>🔄 Gửi lại tất cả</>
+                                                )}
+                                            </button>
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() => {
+                                                    if (confirm('Xóa tất cả đơn chưa đồng bộ? Dữ liệu sẽ mất vĩnh viễn!')) {
+                                                        offlineQueue.clearAll();
+                                                        setRetryResult(null);
+                                                    }
+                                                }}
+                                                disabled={offlineQueue.isRetrying}
+                                            >
+                                                🗑️ Xóa tất cả
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="offline-queue-list">
+                                        {offlineQueue.failedOrders.map((entry) => (
+                                            <div key={entry.id} className="offline-queue-item" onClick={() => console.log(entry)}>
+                                                <div className="offline-queue-item-info">
+                                                    <div className="offline-queue-item-name">{entry.orderName}</div>
+                                                    <div className="offline-queue-item-time">
+                                                        🕒 {new Date(entry.timestamp).toLocaleString('vi-VN')}
+                                                    </div>
+                                                    <div className="offline-queue-item-error">
+                                                        ❌ {entry.error}
+                                                    </div>
+                                                    {entry.lastRetry && (
+                                                        <div className="offline-queue-item-retry-time">
+                                                            🔄 Retry lần cuối: {new Date(entry.lastRetry).toLocaleTimeString('vi-VN')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    className="offline-queue-item-remove"
+                                                    onClick={() => offlineQueue.removeOrder(entry.id)}
+                                                    title="Xóa đơn này"
+                                                    disabled={offlineQueue.isRetrying}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

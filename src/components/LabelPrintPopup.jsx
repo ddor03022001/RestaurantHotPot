@@ -124,9 +124,10 @@ function LabelPrintPopup({ show, onClose, orderItems, posConfig, ecommerceCode }
     const totalLabelsCount = orderItems.reduce((s, i) => s + (i.product.print_product_label ? i.quantity : 0), 0);
 
     const handlePrint = () => {
-        const printContent = document.getElementById('label-print-area');
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        printWindow.document.write(`
+        const printContent = document.getElementById('label-print-area').innerHTML;
+
+        // Tạo chuỗi HTML hoàn chỉnh
+        const htmlString = `
             <html>
             <head>
                 <title>In tem sản phẩm</title>
@@ -139,13 +140,25 @@ function LabelPrintPopup({ show, onClose, orderItems, posConfig, ecommerceCode }
             </head>
             <body>
                 <div class="label-grid">
-                    ${printContent.innerHTML}
+                    ${printContent}
                 </div>
-                <script>window.onload = function() { window.print(); window.close(); }<\/script>
             </body>
             </html>
-        `);
-        printWindow.document.close();
+        `;
+
+        // Kiểm tra xem app có đang chạy trong Electron không
+        if (window.electronAPI && window.electronAPI.printSilentHtml) {
+            // Chạy trong Electron -> In silent
+            window.electronAPI.printSilentHtml(htmlString);
+
+            // Có thể đóng popup luôn sau khi gửi lệnh in
+            onClose();
+        } else {
+            // Fallback: Nếu chạy trên trình duyệt web bình thường
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            printWindow.document.write(htmlString + `<script>window.onload = function() { window.print(); window.close(); }<\/script>`);
+            printWindow.document.close();
+        }
     };
 
     return (

@@ -239,10 +239,10 @@ function OrderHistoryPopup({
         });
     };
 
-    const getPrintProductLabel = (productId) => {
+    const getProductById = (productId) => {
         const product = posData.products.find(p => p.id === productId);
-        if (!product || !product.print_product_label) return false;
-        return true;
+        if (!product) return null;
+        return product;
     }
 
     return (
@@ -476,9 +476,9 @@ function OrderHistoryPopup({
                     lineId: line.id,
                     product: {
                         id: line.product_id[0],
-                        name: getProductName(line.product_id),
-                        display_name: getProductName(line.product_id),
-                        print_product_label: getPrintProductLabel(line.product_id[0]),
+                        name: getProductById(line.product_id[0])?.name,
+                        display_name: getProductById(line.product_id[0])?.display_name,
+                        print_product_label: getProductById(line.product_id[0])?.print_product_label,
                     },
                     quantity: Math.abs(line.qty),
                     note: line.note || '',

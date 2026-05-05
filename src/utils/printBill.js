@@ -22,6 +22,7 @@ import { formatPrice } from './formatters';
  * @param {number} [options.discountAmount] - Discount amount (0 if none)
  * @param {string} [options.note] - Order note
  * @param {string} [options.ecommerceCode] - Ecommerce code
+ * @param {string} [options.companyInvoice] - Company invoice
  * @returns {string} Complete HTML document string
  */
 export function generateBillHTML({
@@ -36,6 +37,7 @@ export function generateBillHTML({
     discountAmount = 0,
     note = '',
     ecommerceCode = '',
+    companyInvoice = '',
 }) {
     const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n));
     const preDiscountTotal = totalAmount + discountAmount;
@@ -183,94 +185,12 @@ export function generateBillHTML({
     </div>
 
     <div class="footer">
+        ${companyInvoice ? `<div class="note-line"><strong>Công ty:</strong> ${companyInvoice}</div>` : ''}
         Hóa đơn điện tử đã được xuất theo thông tin Quý<br>khách hàng cung cấp.
         <div class="footer-thanks">Thank you, see you again!</div>
     </div>
 </body>
 </html>`;
-}
-
-/**
- * Generate plain text receipt for raw printing to receipt printers.
- */
-export function generateBillText({
-    storeName = 'SeaPOS',
-    billTitle = 'HOA DON BAN HANG',
-    orderRef = '',
-    dateStr = '',
-    customerName = '',
-    staffName = '',
-    lines = [],
-    totalAmount = 0,
-    discountAmount = 0,
-    note = '',
-    ecommerceCode = '',
-}) {
-    const W = 42;
-    const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n));
-    const pad = (s, w) => {
-        const len = s.length;
-        const left = Math.floor((w - len) / 2);
-        return ' '.repeat(Math.max(0, left)) + s;
-    };
-    const sep = (ch) => ch.repeat(W);
-    const row = (l, r) => {
-        const sp = Math.max(1, W - l.length - r.length);
-        return l + ' '.repeat(sp) + r;
-    };
-
-    let b = '';
-
-    // Header
-    b += sep('=') + '\n';
-    b += pad(storeName, W) + '\n';
-    b += sep('=') + '\n';
-    b += '\n';
-    b += pad(billTitle, W) + '\n';
-    if (orderRef) b += pad(orderRef, W) + '\n';
-    b += '\n';
-
-    // Meta
-    b += sep('-') + '\n';
-    if (staffName && dateStr) {
-        b += row(staffName, dateStr) + '\n';
-    } else if (dateStr) {
-        b += dateStr + '\n';
-    }
-    if (customerName) b += 'KH: ' + customerName + '\n';
-    if (note) b += 'Ghi chu: ' + note + '\n';
-    if (ecommerceCode) b += 'TMDT: ' + ecommerceCode + '\n';
-
-    // Items header
-    b += sep('=') + '\n';
-    b += row('Mat hang', 'Thanh tien') + '\n';
-    b += sep('-') + '\n';
-
-    // Items
-    for (const item of lines) {
-        b += item.name + '\n';
-        let detail = '  ' + fmt(item.priceUnit) + ' x ' + item.qty;
-        if (item.uom) detail += ' ' + item.uom;
-        if (item.discount > 0) detail += ' (-' + item.discount + '%)';
-        b += row(detail, fmt(item.subtotal) + 'd') + '\n';
-    }
-
-    // Totals
-    b += sep('=') + '\n';
-    if (discountAmount > 0) {
-        b += row('Giam gia:', '-' + fmt(discountAmount) + 'd') + '\n';
-        b += sep('-') + '\n';
-    }
-    b += row('TONG CONG:', fmt(totalAmount) + 'd') + '\n';
-    b += sep('=') + '\n';
-
-    // Footer
-    b += '\n';
-    b += pad('Cam on quy khach!', W) + '\n';
-    b += pad('Thank you, see you again!', W) + '\n';
-    b += '\n';
-
-    return b;
 }
 
 /**
@@ -281,6 +201,18 @@ export function generateBillText({
 export async function printBill(options) {
     const html = generateBillHTML(options);
     const printerName = localStorage.getItem('billPrinterName') || '';
+    if (printerName && window.electronAPI && window.electronAPI.printSilentHtml) {
+        // Chạy trong Electron -> In silent
+        window.electronAPI.printSilentHtml(html, printerName);
+
+    } else {
+        // Fallback: Nếu chạy trên trình duyệt web bình thường
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        printWindow.document.write(html + `<script>window.onload = function() { window.print(); window.close(); }<\/script>`);
+        printWindow.document.close();
+    }
+    return;
+    // const printerName = localStorage.getItem('billPrinterName') || '';
 
     // Silent print: render HTML to image in renderer, send to main for printing
     if (printerName && window.electronAPI && window.electronAPI.silentPrint) {

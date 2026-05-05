@@ -85,6 +85,53 @@ function createCustomerWindow() {
     });
 }
 
+ipcMain.on('print-silent-html', (event, htmlContent, printerName) => {
+    let printWin = new BrowserWindow({
+        show: false,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false
+        }
+    });
+
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+    printWin.loadURL(dataUrl);
+
+    printWin.webContents.on('did-finish-load', () => {
+        // 1. BẮT BUỘC THÊM SETTIMEOUT VỚI MÁY IN USB
+        setTimeout(async () => {
+
+            const heightInPixels = await printWin.webContents.executeJavaScript(`document.documentElement.scrollHeight`);
+            const heightInMicrons = Math.ceil(heightInPixels * 264.58);
+
+            printWin.webContents.print({
+                silent: true,
+                printBackground: true,
+                deviceName: printerName,
+
+                // 2. BẮT BUỘC PHẢI TẮT MARGIN CỦA HỆ ĐIỀU HÀNH
+                margins: {
+                    marginType: 'none'
+                },
+
+                pageSize: {
+                    width: 60000,  // 50mm
+                    height: heightInMicrons + 5000  // 30mm
+                }
+
+                // (Tùy chọn) Ép khổ giấy nếu cần, ví dụ in bill 80mm
+                // pageSize: { width: 80000, height: 297000 } // Đơn vị là micron
+
+            }, (success, failureReason) => {
+                if (!success) {
+                    console.error('In thất bại:', failureReason);
+                }
+                printWin.close();
+            });
+        }, 1000); // Đợi 1 giây để CSS/Font render xong xuôi
+    });
+});
+
 // ========== IPC Handlers ==========
 
 ipcMain.handle('odoo:login', async (_event, url, db, username, password) => {
@@ -339,7 +386,7 @@ ipcMain.handle('get-api-qrcode', async (_, totalAmount) => {
             amount: totalAmount,
             addInfo: "Thanh toán đơn hàng POS",
             format: "text",
-            template: "compact"
+            template: "vasPO3E"
         };
 
         const response = await fetch(apiUrl, {

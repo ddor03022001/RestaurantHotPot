@@ -13,7 +13,7 @@ const JOURNAL_ICONS = {
     purchase: '📭',
 };
 
-function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete, posMode, onRefreshStock }) {
+function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete, posMode, onRefreshStock, offlineQueue }) {
     const isRetail = posMode === 'retail';
     const orderItems = table.orderItems || [];
     const billDiscount = table.billDiscount || { type: 'percent', value: 0 };
@@ -217,6 +217,8 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const handleConfirmPayment = async () => {
         setShowPayConfirm(false);
         setProcessing(true);
+        let orderData = null;
+        let uidId = '';
         try {
             // Find statement_ids for chosen payment journals under the current open session
             const statementIds = [];
@@ -339,13 +341,13 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             const second = String(now.getSeconds()).padStart(2, '0');
 
             const timeString = `${hour}${minutes}${second}`;
-            const uidId = `${timeString}-${posConfig.session.id}-${authData.user.uid}`;
+            uidId = `${timeString}-${posConfig.session.id}-${authData.user.uid}`;
 
             const amount_total = lines.reduce((sum, line) => sum + line[2].price_subtotal_incl, 0);
             const amount_paid = amount_total;
             const amount_tax = lines.reduce((sum, line) => sum + (line[2].price_subtotal_incl - line[2].price_subtotal), 0);
 
-            const orderData = {
+            orderData = {
                 data: {
                     name: `Order ${uidId}`,
                     amount_paid: amount_paid,
@@ -393,7 +395,26 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             });
         } catch (err) {
             console.error("Lỗi thanh toán:", err);
-            alert("Lỗi thanh toán: " + err.message);
+
+            // Save to offline queue instead of blocking
+            if (offlineQueue && offlineQueue.addFailedOrder && orderData) {
+                offlineQueue.addFailedOrder(orderData, err);
+
+                // Still complete the order so cashier can continue
+                setCompleted(true);
+
+                // Still print bill and labels even on network failure
+                doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
+
+                printLabel({
+                    posName: posConfig?.name || 'SeaPOS',
+                    orderItems,
+                    ecommerceCode: `Order ${uidId}`,
+                });
+            } else {
+                // Error happened before orderData was built — show alert
+                alert("Lỗi thanh toán: " + err.message);
+            }
         } finally {
             setProcessing(false);
         }
@@ -415,6 +436,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             dateStr: `${now.toLocaleDateString('vi-VN')} ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
             customerName: selectedCustomer?.name || '',
             staffName: selectedSeller?.name || '',
+            companyInvoice: selectedInvoiceCustomer?.name || '',
             lines: orderItems.map(item => ({
                 name: item.product.display_name || item.product.name,
                 priceUnit: getProductPrice(item.product),

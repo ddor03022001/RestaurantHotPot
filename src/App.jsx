@@ -7,6 +7,7 @@ import OrderScreen from './pages/OrderScreen';
 import PaymentScreen from './pages/PaymentScreen';
 import ManagementScreen from './pages/ManagementScreen';
 import CustomerScreen from './pages/CustomerScreen';
+import { useOfflineQueue } from './hooks/useOfflineQueue';
 
 // Initialize 16 fixed tables
 const createInitialTables = () => {
@@ -62,6 +63,7 @@ function App() {
     const [posMode, setPosMode] = useState(() => {
         return localStorage.getItem('hotpos_mode') || 'restaurant';
     });
+    const offlineQueue = useOfflineQueue();
 
     // Persist mode to localStorage
     useEffect(() => {
@@ -293,6 +295,7 @@ function App() {
                     onComplete={handlePaymentComplete}
                     posMode={posMode}
                     onRefreshStock={refreshStock}
+                    offlineQueue={offlineQueue}
                 />
             );
         }
@@ -313,6 +316,7 @@ function App() {
                     onCloseSession={handleCloseSession}
                     onGoToManagement={handleGoToManagement}
                     onRefreshStock={refreshStock}
+                    offlineQueue={offlineQueue}
                 />
             );
         }

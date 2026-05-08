@@ -343,9 +343,11 @@ function OrderHistoryPopup({
                                 <button className="btn btn-primary" onClick={handlePrintBill}>
                                     🖨️ In lại bill
                                 </button>
-                                <button className="btn btn-secondary" onClick={() => setShowLabelPopup(true)} disabled={orderLines.length === 0}>
-                                    🏷️ In lại tem
-                                </button>
+                                {posConfig.print_product_label && (
+                                    <button className="btn btn-secondary" onClick={() => setShowLabelPopup(true)} disabled={orderLines.length === 0}>
+                                        🏷️ In lại tem
+                                    </button>
+                                )}
                                 {!selectedOrder.return_order_id && (
                                     <button className="btn btn-danger" onClick={() => setShowReturnConfirm(true)}>
                                         🔄 Trả hàng
@@ -468,24 +470,27 @@ function OrderHistoryPopup({
                 </div>
             )}
 
-            {/* Label Print Popup */}
-            <LabelPrintPopup
-                show={showLabelPopup}
-                onClose={() => setShowLabelPopup(false)}
-                orderItems={orderLines.map(line => ({
-                    lineId: line.id,
-                    product: {
-                        id: line.product_id[0],
-                        name: getProductById(line.product_id[0])?.name,
-                        display_name: getProductById(line.product_id[0])?.display_name,
-                        print_product_label: getProductById(line.product_id[0])?.print_product_label,
-                    },
-                    quantity: Math.abs(line.qty),
-                    note: line.note || '',
-                }))}
-                posConfig={posConfig}
-                ecommerceCode={selectedOrder?.pos_reference || selectedOrder?.name || ''}
-            />
+            {/* Label Print Popup (only if enabled in POS config) */}
+            {posConfig.print_product_label && (
+                <LabelPrintPopup
+                    show={showLabelPopup}
+                    onClose={() => setShowLabelPopup(false)}
+                    orderItems={orderLines.map(line => ({
+                        lineId: line.id,
+                        product: {
+                            id: line.product_id[0],
+                            name: getProductById(line.product_id[0])?.name,
+                            note: line.note || '',
+                            display_name: getProductById(line.product_id[0])?.display_name,
+                            print_product_label: getProductById(line.product_id[0])?.print_product_label,
+                        },
+                        quantity: Math.abs(line.qty),
+                        note: line.note || '',
+                    }))}
+                    posConfig={posConfig}
+                    ecommerceCode={selectedOrder?.pos_reference || selectedOrder?.name || ''}
+                />
+            )}
         </div>
     );
 }

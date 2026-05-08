@@ -946,3 +946,245 @@
 .invoice-row-active .invoice-cell-name {
     color: #10b981;
 }
+
+/* ===== Responsive: Small POS Screens ===== */
+
+/* Height <= 800px */
+@media (max-height: 800px) {
+    .payment-header {
+        padding: 6px 12px;
+        gap: 10px;
+    }
+
+    .payment-header-title {
+        font-size: 14px;
+    }
+
+    .payment-header-meta {
+        font-size: 10px;
+    }
+
+    .payment-section {
+        padding: 12px 14px;
+    }
+
+    .payment-section-title {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+
+    /* Right panel */
+    .payment-right {
+        width: 340px;
+    }
+
+    .payment-method-card {
+        padding: 8px 6px;
+        gap: 2px;
+    }
+
+    .payment-method-icon {
+        font-size: 22px;
+    }
+
+    .payment-method-name {
+        font-size: 11px;
+    }
+
+    .payment-methods {
+        gap: 6px;
+    }
+
+    /* Total area */
+    .payment-total-area {
+        padding: 12px 14px;
+    }
+
+    .payment-total-label {
+        font-size: 12px;
+    }
+
+    .payment-total-subtotal {
+        font-size: 12px;
+    }
+
+    .payment-total-label-big {
+        font-size: 14px;
+    }
+
+    .payment-total-value-big {
+        font-size: 22px;
+    }
+
+    .payment-total-final {
+        padding-top: 8px;
+        margin-bottom: 12px;
+    }
+
+    .payment-pay-btn {
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .payment-print-btn {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .payment-done-btn {
+        margin-top: 16px;
+        padding: 12px 30px;
+        font-size: 14px;
+    }
+
+    /* Seller buttons */
+    .seller-select-btn {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+
+    /* Order summary items */
+    .payment-order-item-name {
+        font-size: 12px;
+    }
+
+    .payment-order-item-price {
+        font-size: 12px;
+    }
+
+    .payment-order-item-qty {
+        min-width: 22px;
+        height: 20px;
+        font-size: 11px;
+    }
+
+    /* Payment lines */
+    .payment-line {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .payment-line-name {
+        font-size: 12px;
+    }
+
+    .payment-line-amount {
+        width: 90px;
+        padding: 4px 6px;
+        font-size: 12px;
+    }
+
+    /* Success screen */
+    .payment-success {
+        padding: 20px;
+        gap: 8px;
+    }
+
+    .payment-success-icon {
+        font-size: 56px;
+        margin-bottom: 4px;
+    }
+
+    .payment-success-title {
+        font-size: 22px;
+    }
+
+    .payment-success-detail {
+        font-size: 14px;
+    }
+}
+
+/* Height <= 650px */
+@media (max-height: 650px) {
+    .payment-header {
+        padding: 4px 8px;
+        gap: 8px;
+    }
+
+    .payment-header-title {
+        font-size: 13px;
+    }
+
+    .payment-header-meta {
+        display: none;
+    }
+
+    .payment-right {
+        width: 300px;
+    }
+
+    .payment-section {
+        padding: 8px 10px;
+    }
+
+    .payment-section-title {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+
+    .payment-method-card {
+        padding: 6px 4px;
+    }
+
+    .payment-method-icon {
+        font-size: 18px;
+    }
+
+    .payment-method-name {
+        font-size: 10px;
+    }
+
+    .payment-total-area {
+        padding: 8px 10px;
+    }
+
+    .payment-total-value-big {
+        font-size: 18px;
+    }
+
+    .payment-total-final {
+        margin-bottom: 8px;
+    }
+
+    .payment-pay-btn {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .payment-print-btn {
+        padding: 8px 10px;
+        font-size: 11px;
+        min-width: 80px;
+    }
+
+    .seller-select-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .payment-success-icon {
+        font-size: 40px;
+    }
+
+    .payment-success-title {
+        font-size: 18px;
+    }
+}
+
+/* Width <= 1100px */
+@media (max-width: 1100px) {
+    .payment-right {
+        width: 320px;
+    }
+
+    .payment-methods {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Width <= 900px */
+@media (max-width: 900px) {
+    .payment-right {
+        width: 280px;
+    }
+}

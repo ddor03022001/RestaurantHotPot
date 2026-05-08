@@ -681,3 +681,172 @@
     color: var(--text-primary);
     margin-bottom: 12px;
 }
+
+/* ===== Responsive: Small POS Screens ===== */
+@media (max-height: 800px) {
+    .table-header {
+        padding: 8px 16px;
+        gap: 10px;
+    }
+
+    .table-header-title {
+        font-size: 16px;
+    }
+
+    .table-header-meta {
+        font-size: 11px;
+    }
+
+    .table-toolbar {
+        padding: 6px 16px;
+        gap: 8px;
+    }
+
+    .table-mode-btn {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+
+    .table-grid-container {
+        padding: 12px;
+    }
+
+    .table-grid {
+        gap: 12px;
+    }
+
+    .table-legend {
+        padding: 6px 16px;
+        gap: 16px;
+    }
+
+    .table-legend-item {
+        font-size: 11px;
+    }
+
+    .table-stat-label {
+        font-size: 12px;
+    }
+
+    /* Popup compact */
+    .popup-card {
+        padding: 24px 20px;
+    }
+
+    .popup-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+    }
+
+    .popup-title {
+        font-size: 18px;
+    }
+
+    .popup-desc {
+        font-size: 13px;
+        margin-bottom: 18px;
+    }
+
+    .popup-btn {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    /* History popup compact */
+    .history-popup {
+        max-height: 90vh;
+    }
+
+    .history-header {
+        padding: 10px 16px;
+    }
+
+    .history-title {
+        font-size: 14px;
+    }
+
+    .history-table-header {
+        padding: 6px 16px;
+    }
+
+    .history-table-row {
+        padding: 8px 16px;
+    }
+
+    .history-col {
+        font-size: 12px;
+    }
+}
+
+@media (max-height: 650px) {
+    .table-header {
+        padding: 4px 10px;
+        gap: 6px;
+    }
+
+    .table-header-title {
+        font-size: 14px;
+    }
+
+    .table-header-meta {
+        display: none;
+    }
+
+    .table-toolbar {
+        padding: 4px 10px;
+    }
+
+    .table-mode-btn {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+
+    .table-grid-container {
+        padding: 8px;
+    }
+
+    .table-grid {
+        gap: 8px;
+    }
+
+    .table-legend {
+        padding: 4px 10px;
+        gap: 10px;
+    }
+
+    .table-legend-item {
+        font-size: 10px;
+    }
+
+    .table-stat-label {
+        font-size: 11px;
+    }
+
+    .table-stat-dot {
+        width: 8px;
+        height: 8px;
+    }
+
+    .popup-card {
+        padding: 16px 14px;
+    }
+
+    .popup-icon {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+
+    .popup-title {
+        font-size: 16px;
+    }
+
+    .popup-desc {
+        font-size: 12px;
+        margin-bottom: 12px;
+    }
+
+    .popup-btn {
+        padding: 8px;
+        font-size: 12px;
+    }
+}

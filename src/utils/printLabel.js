@@ -1,9 +1,11 @@
 /**
  * Centralized Label Printing Utility
  *
- * Generates product label HTML and prints silently via html2canvas + PowerShell.
- * Uses the same approach as printBill.js.
- * Used by: PaymentScreen (auto-print after payment)
+ * Generates product label HTML and prints silently via Electron's native print.
+ * Each label is printed as a SEPARATE print job to prevent drift on label rolls
+ * where stickers have gaps between them.
+ *
+ * Used by: PaymentScreen (auto-print after payment), LabelPrintPopup (manual print)
  */
 
 const LABEL_STYLES = `
@@ -35,7 +37,6 @@ const LABEL_STYLES = `
         justify-content: flex-start;
         align-items: flex-start;
         min-height: 4mm;
-        border-bottom: 0.15mm solid #ccc;
         margin-bottom: 1mm;
         padding-right: 8mm;
     }
@@ -81,7 +82,7 @@ const LABEL_STYLES = `
     .label-ecommerce {
         font-size: 7pt;
         font-weight: 700;
-        color: #444;
+        color: #333;
         padding: 0.3mm 1mm;
         margin-top: 0.5mm;
         border-radius: 0.5mm;
@@ -91,7 +92,7 @@ const LABEL_STYLES = `
     .label-note-box {
         font-size: 6.5pt;
         font-style: italic;
-        color: #555;
+        color: #333;
         line-height: 1.2;
         padding: 0.5mm 1mm;
         border-left: 0.3mm solid #ddd;
@@ -109,14 +110,57 @@ const LABEL_STYLES = `
     }
     .label-date {
         font-size: 5pt;
-        color: #999;
+        color: #333;
         font-weight: 500;
     }
     @page { size: 50mm 30mm landscape; margin: 0; }
 `;
 
 /**
- * Generate full HTML document string for label printing.
+ * Generate HTML for a SINGLE label.
+ * Exported so LabelPrintPopup can reuse it.
+ *
+ * @param {object} params
+ * @param {string} params.posName
+ * @param {string} params.productName
+ * @param {string} [params.ecommerceCode]
+ * @param {string} [params.note]
+ * @param {number} params.serialNum - Current label number (e.g. 2)
+ * @param {number} params.totalLabels - Total labels in batch (e.g. 5)
+ * @param {string} params.datetime - Formatted date/time string
+ * @returns {string} Complete HTML document for 1 label
+ */
+export function generateSingleLabelHTML({ posName, productName, ecommerceCode, note, serialNum, totalLabels, datetime }) {
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>In tem sản phẩm</title>
+    <style>${LABEL_STYLES}</style>
+</head>
+<body>
+    <div class="label-grid">
+        <div class="product-label">
+            <div class="label-serial-badge">${serialNum}/${totalLabels}</div>
+            <div class="label-header">
+                <div class="label-pos-name">${posName}</div>
+            </div>
+            <div class="label-body">
+                <div class="label-product-name">${productName}</div>
+                ${ecommerceCode && ecommerceCode.trim() ? `<div class="label-ecommerce">${ecommerceCode}</div>` : ''}
+                ${note && note.trim() ? `<div class="label-note-box">${note}</div>` : ''}
+            </div>
+            <div class="label-footer">
+                <div class="label-date">${datetime}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * Generate full HTML document string for ALL labels (used for popup/fallback printing).
  *
  * @param {object} options
  * @param {string} options.posName - POS display name
@@ -179,7 +223,7 @@ export function generateLabelHTML({ posName = 'SeaPOS', orderItems = [], ecommer
 
 /**
  * Print product labels silently.
- * Uses html2canvas to render labels in the renderer, sends image to main process for PowerShell printing.
+ * Each label is sent as an INDIVIDUAL print job to prevent drift on label rolls.
  *
  * @param {object} options
  * @param {string} options.posName
@@ -193,69 +237,45 @@ export async function printLabel(options) {
     );
     if (!hasLabels) return;
 
-    const html = generateLabelHTML(options);
     const printerName = localStorage.getItem('labelPrinterName') || '';
+    const printableItems = (options.orderItems || []).filter(item => item.product?.print_product_label);
+    const totalLabels = printableItems.reduce((s, i) => s + i.quantity, 0);
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    const datetime = `${timeStr} ${dateStr}`;
 
     if (printerName && window.electronAPI && window.electronAPI.printSilentHtml) {
-        // Chạy trong Electron -> In silent
-        window.electronAPI.printSilentHtml(html, printerName);
+        // In silent trong Electron — MỖI TEM LÀ 1 PRINT JOB RIÊNG
+        let globalSerial = 0;
 
+        for (const item of printableItems) {
+            for (let i = 0; i < item.quantity; i++) {
+                globalSerial++;
+                const html = generateSingleLabelHTML({
+                    posName: options.posName || 'SeaPOS',
+                    productName: item.product.name || item.product.display_name || '',
+                    ecommerceCode: options.ecommerceCode || '',
+                    note: item.note || '',
+                    serialNum: globalSerial,
+                    totalLabels,
+                    datetime
+                });
+
+                // Chờ in xong tem hiện tại trước khi gửi tem tiếp
+                try {
+                    await window.electronAPI.printSilentHtml(html, printerName, 'tem');
+                } catch (err) {
+                    console.warn(`In tem ${globalSerial}/${totalLabels} thất bại:`, err);
+                }
+            }
+        }
     } else {
-        // Fallback: Nếu chạy trên trình duyệt web bình thường
+        // Fallback: popup window với tất cả tem (dùng khi chạy trên browser)
+        const html = generateLabelHTML(options);
         const printWindow = window.open('', '_blank', 'width=800,height=600');
         printWindow.document.write(html + `<script>window.onload = function() { window.print(); window.close(); }<\/script>`);
         printWindow.document.close();
     }
-    return;
-
-    // Silent print via html2canvas + PowerShell
-    if (printerName && window.electronAPI && window.electronAPI.silentPrint) {
-        try {
-            const { default: html2canvas } = await import('html2canvas');
-
-            const container = document.createElement('div');
-            container.style.cssText = 'position:fixed;left:-9999px;top:0;width:190px;background:#fff;';
-
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-
-            const styles = doc.querySelectorAll('style');
-            styles.forEach(s => container.appendChild(s.cloneNode(true)));
-            container.innerHTML += doc.body.innerHTML;
-
-            document.body.appendChild(container);
-            await new Promise(r => setTimeout(r, 200));
-
-            const canvas = await html2canvas(container, {
-                backgroundColor: '#ffffff',
-                scale: 2,
-                logging: false,
-            });
-
-            document.body.removeChild(container);
-
-            const base64 = canvas.toDataURL('image/png').split(',')[1];
-            await window.electronAPI.silentPrint(base64, printerName);
-            return;
-        } catch (err) {
-            console.warn('Silent label print failed, falling back to popup:', err);
-        }
-    }
-
-    // Fallback: popup window
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    if (!printWindow) {
-        console.error('Could not open label print window');
-        return;
-    }
-    printWindow.document.write(html + `
-        <script>
-            window.onload = function() {
-                window.print();
-                window.onafterprint = function() { window.close(); };
-                setTimeout(function() { window.close(); }, 3000);
-            };
-        </script>
-    `);
-    printWindow.document.close();
 }

@@ -62,21 +62,20 @@ export function generateBillHTML({
     <title>${billTitle}</title>
     <style>
         @page { 
-            size: 72mm auto;
             margin: 0; 
         }
         * { box-sizing: border-box; }
         body { 
             font-family: Arial, Helvetica, sans-serif; 
-            width: 72mm; 
+            // width: 72mm; 
             margin: 0; 
             padding: 2mm;
             color: #000;
             line-height: 1.2;
         }
-        @media print {
-            body { width: 72mm; margin: 0; padding: 2mm; }
-        }
+        // @media print {
+        //     body { width: 72mm; margin: 0; padding: 2mm; }
+        // }
 
         /* Header Section */
         .header-container { display: flex; align-items: center; justify-content: center; margin: 10px; }
@@ -203,7 +202,7 @@ export async function printBill(options) {
     const printerName = localStorage.getItem('billPrinterName') || '';
     if (printerName && window.electronAPI && window.electronAPI.printSilentHtml) {
         // Chạy trong Electron -> In silent
-        window.electronAPI.printSilentHtml(html, printerName);
+        window.electronAPI.printSilentHtml(html, printerName, 'bill');
 
     } else {
         // Fallback: Nếu chạy trên trình duyệt web bình thường

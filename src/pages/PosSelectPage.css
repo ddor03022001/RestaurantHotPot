@@ -219,3 +219,93 @@
     display: block;
     margin-bottom: 12px;
 }
+
+/* ===== Responsive: Small POS Screens ===== */
+@media (max-height: 800px) {
+    .pos-header {
+        padding: 12px 20px;
+    }
+
+    .pos-header-title {
+        font-size: 18px;
+    }
+
+    .pos-header-subtitle {
+        font-size: 12px;
+    }
+
+    .pos-content {
+        padding: 16px;
+    }
+
+    .pos-grid {
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .pos-card {
+        padding: 20px 16px;
+    }
+
+    .pos-card-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+    }
+
+    .pos-card-name {
+        font-size: 15px;
+        margin-bottom: 4px;
+    }
+
+    .pos-card-location {
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    .pos-card-open-text,
+    .pos-card-opening-text {
+        font-size: 12px;
+    }
+
+    .pos-card-badge {
+        font-size: 12px;
+        padding: 4px 10px;
+    }
+}
+
+@media (max-height: 650px) {
+    .pos-header {
+        padding: 8px 16px;
+    }
+
+    .pos-header-title {
+        font-size: 16px;
+    }
+
+    .pos-content {
+        padding: 10px;
+    }
+
+    .pos-grid {
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .pos-card {
+        padding: 14px 12px;
+    }
+
+    .pos-card-icon {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+
+    .pos-card-name {
+        font-size: 13px;
+    }
+
+    .pos-card-location {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+}

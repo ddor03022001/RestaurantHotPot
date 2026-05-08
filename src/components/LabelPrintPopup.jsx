@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatPrice } from '../utils/formatters';
+import { generateSingleLabelHTML } from '../utils/printLabel';
 
 const BARCODE_LABEL_STYLES = `
     .label-grid {
@@ -24,7 +25,6 @@ const BARCODE_LABEL_STYLES = `
         justify-content: flex-start;
         align-items: flex-start;
         min-height: 4mm;
-        border-bottom: 0.15mm solid #ccc;
         margin-bottom: 1mm;
         padding-right: 8mm; /* Clear room for the badge */
     }
@@ -123,38 +123,65 @@ function LabelPrintPopup({ show, onClose, orderItems, posConfig, ecommerceCode }
 
     const totalLabelsCount = orderItems.reduce((s, i) => s + (i.product.print_product_label ? i.quantity : 0), 0);
 
-    const handlePrint = () => {
-        const printContent = document.getElementById('label-print-area').innerHTML;
+    const handlePrint = async () => {
+        const printerName = localStorage.getItem('labelPrinterName') || '';
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+        const datetime = `${timeStr} ${dateStr}`;
+        const posName = posConfig?.name || 'SeaPOS';
 
-        // Tạo chuỗi HTML hoàn chỉnh
-        const htmlString = `
-            <html>
-            <head>
-                <title>In tem sản phẩm</title>
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #fff; }
-                    ${BARCODE_LABEL_STYLES}
-                    @page { size: 50mm 30mm landscape; margin: 0; }
-                </style>
-            </head>
-            <body>
-                <div class="label-grid">
-                    ${printContent}
-                </div>
-            </body>
-            </html>
-        `;
+        // Lọc ra các item cần in tem
+        const printableItems = orderItems.filter(item => item.product?.print_product_label);
+        const totalLabels = printableItems.reduce((s, i) => s + i.quantity, 0);
 
-        // Kiểm tra xem app có đang chạy trong Electron không
-        if (window.electronAPI && window.electronAPI.printSilentHtml) {
-            // Chạy trong Electron -> In silent
-            window.electronAPI.printSilentHtml(htmlString);
+        if (printerName && window.electronAPI && window.electronAPI.printSilentHtml) {
+            // In silent trong Electron — MỖI TEM LÀ 1 PRINT JOB RIÊNG
+            let globalSerial = 0;
 
-            // Có thể đóng popup luôn sau khi gửi lệnh in
+            for (const item of printableItems) {
+                for (let i = 0; i < item.quantity; i++) {
+                    globalSerial++;
+                    const html = generateSingleLabelHTML({
+                        posName,
+                        productName: item.product.name || item.product.display_name || '',
+                        ecommerceCode: ecommerceCode || '',
+                        note: item.note || '',
+                        serialNum: globalSerial,
+                        totalLabels,
+                        datetime
+                    });
+
+                    try {
+                        await window.electronAPI.printSilentHtml(html, printerName, 'tem');
+                    } catch (err) {
+                        console.warn(`In tem ${globalSerial}/${totalLabels} thất bại:`, err);
+                    }
+                }
+            }
+
             onClose();
         } else {
-            // Fallback: Nếu chạy trên trình duyệt web bình thường
+            // Fallback: popup window (browser)
+            const printContent = document.getElementById('label-print-area').innerHTML;
+            const htmlString = `
+                <html>
+                <head>
+                    <title>In tem sản phẩm</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #fff; }
+                        ${BARCODE_LABEL_STYLES}
+                        @page { size: 50mm 30mm landscape; margin: 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="label-grid">
+                        ${printContent}
+                    </div>
+                </body>
+                </html>
+            `;
             const printWindow = window.open('', '_blank', 'width=800,height=600');
             printWindow.document.write(htmlString + `<script>window.onload = function() { window.print(); window.close(); }<\/script>`);
             printWindow.document.close();

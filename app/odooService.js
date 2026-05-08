@@ -99,7 +99,7 @@ class OdooService {
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
                 'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer',
                 'enable_dynamic_qrcode_viet', 'apikey_qrcode_viet', 'client_id_qrcode_viet', 'account_no', 'account_name', 'account_id',
-                'seller_ids', 'internal_transfer', 'operation_type_internal_transfer'
+                'seller_ids', 'internal_transfer', 'operation_type_internal_transfer', 'print_product_label'
             ],
         });
 
@@ -502,7 +502,7 @@ class OdooService {
         return OdooService._execute(url, db, uid, password, 'pos.order.line', 'search_read',
             [[['id', 'in', lineIds]]],
             {
-                fields: ['id', 'order_id', 'product_id', 'qty', 'price_unit',
+                fields: ['id', 'order_id', 'product_id', 'qty', 'price_unit', 'note',
                     'price_subtotal', 'price_subtotal_incl', 'discount_type', 'discount', 'discount_amount', 'uom_id'],
             }
         );

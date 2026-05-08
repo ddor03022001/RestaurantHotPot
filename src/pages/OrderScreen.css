@@ -2003,9 +2003,12 @@
 }
 
 @keyframes offlineQueuePulse {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
     }
+
     50% {
         box-shadow: 0 0 35px rgba(239, 68, 68, 0.45);
     }
@@ -2031,9 +2034,17 @@
 }
 
 @keyframes badgeBounce {
-    0% { transform: scale(0); }
-    60% { transform: scale(1.2); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(0);
+    }
+
+    60% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* Offline Queue Popup */
@@ -2199,4 +2210,321 @@
 .offline-queue-item-remove:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+/* ===== Responsive: Small POS Screens ===== */
+
+/* Height <= 800px: Standard POS (1024x768, 1280x720) */
+@media (max-height: 800px) {
+    .order-header {
+        padding: 6px 12px;
+        gap: 6px 10px;
+    }
+
+    .order-header-title {
+        font-size: 14px;
+    }
+
+    .order-header-meta {
+        font-size: 10px;
+    }
+
+    .order-header-toolbar {
+        gap: 4px;
+    }
+
+    .order-toolbar-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+        gap: 4px;
+        border-radius: 6px;
+    }
+
+    .order-mode-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+        gap: 4px;
+    }
+
+    .order-mode-toggle {
+        border-radius: 7px;
+    }
+
+    .order-header-right {
+        gap: 5px;
+    }
+
+    .order-header-right .btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .offline-queue-btn {
+        font-size: 11px !important;
+    }
+
+    /* Search & Categories compact */
+    .order-search {
+        padding: 6px 12px;
+    }
+
+    .order-search-input {
+        padding: 7px 10px;
+        font-size: 12px;
+    }
+
+    .order-categories {
+        padding: 5px 12px;
+        gap: 4px;
+    }
+
+    .order-cat-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+
+    /* Product grid compact */
+    .order-product-grid {
+        padding: 8px 10px;
+        gap: 8px;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    }
+
+    .order-product-card {
+        padding: 10px 8px;
+    }
+
+    .order-product-name {
+        font-size: 12px;
+        margin-bottom: 3px;
+    }
+
+    .order-product-price {
+        font-size: 12px;
+    }
+
+    .order-product-cat {
+        font-size: 9px;
+    }
+
+    .order-product-stock {
+        font-size: 10px;
+    }
+
+    /* Right panel compact */
+    .order-panel {
+        width: 310px;
+    }
+
+    .order-panel-header {
+        padding: 8px 12px;
+    }
+
+    .order-panel-title {
+        font-size: 14px;
+    }
+
+    .order-item {
+        padding: 5px 12px;
+    }
+
+    .order-item-name {
+        font-size: 12px;
+    }
+
+    .order-item-price {
+        font-size: 12px;
+    }
+
+    /* Footer compact */
+    .order-panel-footer {
+        padding: 8px 12px;
+    }
+
+    .order-total-label {
+        font-size: 12px;
+    }
+
+    .order-total-sub {
+        font-size: 12px;
+    }
+
+    .order-total-label-big {
+        font-size: 13px;
+    }
+
+    .order-total-value {
+        font-size: 18px;
+    }
+
+    .order-action-btn {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .order-panel-actions {
+        gap: 5px;
+    }
+
+    .order-bill-discount-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
+/* Height <= 650px: Very small POS (800x600) */
+@media (max-height: 650px) {
+    .order-header {
+        padding: 4px 8px;
+        gap: 4px 6px;
+    }
+
+    .order-header-title {
+        font-size: 13px;
+    }
+
+    .order-header-meta {
+        display: none;
+    }
+
+    .order-toolbar-btn {
+        padding: 3px 7px;
+        font-size: 10px;
+    }
+
+    .order-mode-btn {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+
+    .order-header-right .btn {
+        padding: 3px 7px;
+        font-size: 10px;
+    }
+
+    .offline-queue-btn {
+        font-size: 10px !important;
+    }
+
+    .order-search {
+        padding: 4px 8px;
+    }
+
+    .order-search-input {
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    .order-categories {
+        padding: 3px 8px;
+        gap: 3px;
+    }
+
+    .order-cat-btn {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+
+    .order-product-grid {
+        padding: 6px 8px;
+        gap: 6px;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .order-product-card {
+        padding: 8px 6px;
+    }
+
+    .order-product-name {
+        font-size: 11px;
+        margin-bottom: 2px;
+    }
+
+    .order-product-price {
+        font-size: 11px;
+    }
+
+    .order-panel {
+        width: 260px;
+    }
+
+    .order-panel-header {
+        padding: 5px 10px;
+    }
+
+    .order-panel-title {
+        font-size: 13px;
+    }
+
+    .order-item {
+        padding: 3px 10px;
+    }
+
+    .order-item-name {
+        font-size: 11px;
+    }
+
+    .order-item-price {
+        font-size: 11px;
+    }
+
+    .order-qty-btn {
+        width: 22px;
+        height: 22px;
+        font-size: 13px;
+    }
+
+    .order-qty-input {
+        width: 38px;
+        font-size: 11px;
+    }
+
+    .order-panel-footer {
+        padding: 6px 10px;
+    }
+
+    .order-total-value {
+        font-size: 16px;
+    }
+
+    .order-action-btn {
+        padding: 6px;
+        font-size: 12px;
+    }
+}
+
+/* Width <= 1100px: Narrow screens */
+@media (max-width: 1100px) {
+    .order-panel {
+        width: 280px;
+    }
+
+    .order-product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    }
+
+    .order-toolbar-btn {
+        max-width: 140px;
+    }
+}
+
+/* Width <= 900px: Very narrow */
+@media (max-width: 900px) {
+    .order-panel {
+        width: 240px;
+    }
+
+    .order-header-toolbar {
+        gap: 3px;
+    }
+
+    .order-toolbar-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+        max-width: 120px;
+    }
+
+    .order-product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
 }

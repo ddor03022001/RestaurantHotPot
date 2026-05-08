@@ -180,11 +180,9 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     // Closed table → set default pricelist and save to table; Open table → keep saved
     const getInitialPricelist = () => {
         if (hasOrders && table.selectedPricelist) return table.selectedPricelist;
-        // Closed table: find default and save it
+        // Closed table: find default
         if (defaultPricelistId && pricelists.length > 0) {
-            const defaultPl = pricelists.find(pl => pl.id === defaultPricelistId) || null;
-            if (defaultPl) updateTable(table.id, { selectedPricelist: defaultPl });
-            return defaultPl;
+            return pricelists.find(pl => pl.id === defaultPricelistId) || null;
         }
         return null;
     };
@@ -192,6 +190,13 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [showPricelistPopup, setShowPricelistPopup] = useState(false);
     const [selectedPromotion, setSelectedPromotion] = useState(table.selectedPromotion || null);
     const [showPromotionPopup, setShowPromotionPopup] = useState(false);
+
+    // Sync default pricelist to table on mount (avoids setState during render)
+    useEffect(() => {
+        if (!hasOrders && !table.selectedPricelist && selectedPricelist) {
+            updateTable(table.id, { selectedPricelist });
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Sync order items + bill discount back to table
     const syncOrderItems = (newItems, newBillDiscount) => {
@@ -258,7 +263,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     };
 
     const syncCustomer = (customer) => {
-        console.log(customer);
+        // console.log(customer);
         setSelectedCustomer(customer);
         updateTable(table.id, { selectedCustomer: customer });
         if (customer.group_id) {

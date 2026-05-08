@@ -384,15 +384,18 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
             setCompleted(true);
 
-            // Auto-print bill after successful payment
+            // Auto-print 2 bills after successful payment
+            doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
             doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
 
-            // Auto-print labels after successful payment
-            printLabel({
-                posName: posConfig?.name || 'SeaPOS',
-                orderItems,
-                ecommerceCode: `Order ${uidId}`,
-            });
+            // Auto-print labels after successful payment (only if enabled in POS config)
+            if (posConfig.print_product_label) {
+                printLabel({
+                    posName: posConfig?.name || 'SeaPOS',
+                    orderItems,
+                    ecommerceCode: `Order ${uidId}`,
+                });
+            }
         } catch (err) {
             console.error("Lỗi thanh toán:", err);
 
@@ -403,14 +406,17 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 // Still complete the order so cashier can continue
                 setCompleted(true);
 
-                // Still print bill and labels even on network failure
+                // Still print 2 bills and labels even on network failure
+                doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
                 doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
 
-                printLabel({
-                    posName: posConfig?.name || 'SeaPOS',
-                    orderItems,
-                    ecommerceCode: `Order ${uidId}`,
-                });
+                if (posConfig.print_product_label) {
+                    printLabel({
+                        posName: posConfig?.name || 'SeaPOS',
+                        orderItems,
+                        ecommerceCode: `Order ${uidId}`,
+                    });
+                }
             } else {
                 // Error happened before orderData was built — show alert
                 alert("Lỗi thanh toán: " + err.message);
@@ -788,13 +794,15 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             >
                                 🛒 TMĐT Code {ecommerceCode && ecommerceCode.trim() ? '✓' : ''}
                             </button>
-                            <button
-                                className="btn btn-secondary payment-print-btn"
-                                onClick={() => setShowLabelPopup(true)}
-                                disabled={orderItems.length === 0}
-                            >
-                                🏷️ In tem
-                            </button>
+                            {posConfig.print_product_label && (
+                                <button
+                                    className="btn btn-secondary payment-print-btn"
+                                    onClick={() => setShowLabelPopup(true)}
+                                    disabled={orderItems.length === 0}
+                                >
+                                    🏷️ In tem
+                                </button>
+                            )}
                         </div>
                         <div className="payment-actions-row">
                             <button
@@ -878,14 +886,16 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                 </div>
             )}
 
-            {/* Label Printing Popup */}
-            <LabelPrintPopup
-                show={showLabelPopup}
-                onClose={() => setShowLabelPopup(false)}
-                orderItems={orderItems}
-                posConfig={posConfig}
-                ecommerceCode={ecommerceCode}
-            />
+            {/* Label Printing Popup (only if enabled in POS config) */}
+            {posConfig.print_product_label && (
+                <LabelPrintPopup
+                    show={showLabelPopup}
+                    onClose={() => setShowLabelPopup(false)}
+                    orderItems={orderItems}
+                    posConfig={posConfig}
+                    ecommerceCode={ecommerceCode}
+                />
+            )}
 
             {/* Invoice Customer Selection Popup */}
             {showInvoiceCustomerPopup && (

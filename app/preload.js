@@ -102,5 +102,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPrinters: () =>
         ipcRenderer.invoke('window:getPrinters'),
 
-    printSilentHtml: (htmlContent, printerName) => ipcRenderer.send('print-silent-html', htmlContent, printerName),
+    printSilentHtml: (htmlContent, printerName, type) => ipcRenderer.invoke('print-silent-html', htmlContent, printerName, type),
+
+    // Customer Display Settings
+    selectVideoFile: () => ipcRenderer.invoke('dialog:selectVideoFile'),
+    getAppDataPath: () => ipcRenderer.invoke('app:getDataPath'),
 });

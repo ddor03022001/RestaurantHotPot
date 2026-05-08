@@ -85,50 +85,55 @@ function createCustomerWindow() {
     });
 }
 
-ipcMain.on('print-silent-html', (event, htmlContent, printerName) => {
-    let printWin = new BrowserWindow({
-        show: false,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false
-        }
-    });
+ipcMain.handle('print-silent-html', (event, htmlContent, printerName, type) => {
+    return new Promise((resolve, reject) => {
+        let printWin = new BrowserWindow({
+            show: false,
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false
+            }
+        });
 
-    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-    printWin.loadURL(dataUrl);
+        const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+        printWin.loadURL(dataUrl);
 
-    printWin.webContents.on('did-finish-load', () => {
-        // 1. BẮT BUỘC THÊM SETTIMEOUT VỚI MÁY IN USB
-        setTimeout(async () => {
+        printWin.webContents.on('did-finish-load', () => {
+            setTimeout(async () => {
+                let pageWidth, pageHeight;
 
-            const heightInPixels = await printWin.webContents.executeJavaScript(`document.documentElement.scrollHeight`);
-            const heightInMicrons = Math.ceil(heightInPixels * 264.58);
-
-            printWin.webContents.print({
-                silent: true,
-                printBackground: true,
-                deviceName: printerName,
-
-                // 2. BẮT BUỘC PHẢI TẮT MARGIN CỦA HỆ ĐIỀU HÀNH
-                margins: {
-                    marginType: 'none'
-                },
-
-                pageSize: {
-                    width: 60000,  // 50mm
-                    height: heightInMicrons + 5000  // 30mm
+                if (type === 'tem') {
+                    // Kích thước cố định cho tem - mỗi tem đúng 50mm × 30mm
+                    // Máy in tem sẽ tự detect gap sensor cho từng tem
+                    pageWidth = 50000;   // 50mm in microns
+                    pageHeight = 30000;  // 30mm in microns
+                } else {
+                    // Bill: tính chiều cao động theo nội dung
+                    const heightInPixels = await printWin.webContents.executeJavaScript(`document.documentElement.scrollHeight`);
+                    pageHeight = Math.ceil(heightInPixels * 264.58);
+                    pageWidth = 71000;   // ~58mm cho máy in bill nhiệt
                 }
 
-                // (Tùy chọn) Ép khổ giấy nếu cần, ví dụ in bill 80mm
-                // pageSize: { width: 80000, height: 297000 } // Đơn vị là micron
-
-            }, (success, failureReason) => {
-                if (!success) {
-                    console.error('In thất bại:', failureReason);
-                }
-                printWin.close();
-            });
-        }, 1000); // Đợi 1 giây để CSS/Font render xong xuôi
+                printWin.webContents.print({
+                    silent: true,
+                    printBackground: true,
+                    deviceName: printerName,
+                    margins: {
+                        marginType: 'none'
+                    },
+                    pageSize: {
+                        width: pageWidth,
+                        height: pageHeight
+                    }
+                }, (success, failureReason) => {
+                    if (!success) {
+                        console.error('In thất bại:', failureReason);
+                    }
+                    printWin.close();
+                    resolve(success);
+                });
+            }, 500); // Giảm timeout vì mỗi tem chỉ có 1 label nhỏ
+        });
     });
 });
 
@@ -495,6 +500,48 @@ ipcMain.handle('window:getPrinters', async () => {
     } catch (err) {
         return [];
     }
+});
+
+// ========== Customer Display Settings ==========
+ipcMain.handle('dialog:selectVideoFile', async () => {
+    const fs = require('fs');
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Chọn video quảng cáo',
+        filters: [
+            { name: 'Video', extensions: ['mp4', 'webm', 'avi', 'mov', 'mkv'] },
+        ],
+        properties: ['openFile'],
+    });
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return { success: false };
+    }
+
+    const srcPath = result.filePaths[0];
+    const ext = path.extname(srcPath);
+    const destDir = app.getPath('userData');
+    const destPath = path.join(destDir, `customer_video${ext}`);
+
+    try {
+        // Remove old video files (any extension)
+        const files = fs.readdirSync(destDir);
+        for (const file of files) {
+            if (file.startsWith('customer_video')) {
+                fs.unlinkSync(path.join(destDir, file));
+            }
+        }
+        // Copy new video
+        fs.copyFileSync(srcPath, destPath);
+        console.log('[VIDEO] Copied to:', destPath);
+        return { success: true, filePath: destPath };
+    } catch (err) {
+        console.error('[VIDEO] Copy failed:', err);
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('app:getDataPath', () => {
+    return app.getPath('userData');
 });
 
 // ========== App Lifecycle ==========

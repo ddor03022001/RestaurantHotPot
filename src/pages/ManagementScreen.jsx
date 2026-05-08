@@ -57,6 +57,12 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
     const [testPrintDone, setTestPrintDone] = useState(false);
     const [testLabelPrintDone, setTestLabelPrintDone] = useState(false);
 
+    // Customer Display settings state
+    const [customerTitle, setCustomerTitle] = useState(localStorage.getItem('customerDisplayTitle') || '');
+    const [customerVideoPath, setCustomerVideoPath] = useState(localStorage.getItem('customerVideoPath') || '');
+    const [videoUploading, setVideoUploading] = useState(false);
+    const [titleSaved, setTitleSaved] = useState(false);
+
     // Fetch all orders (30 days) once on mount
     const fetchAllData = useCallback(async () => {
         setLoading(true);
@@ -644,6 +650,42 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
         setTimeout(() => setTestLabelPrintDone(false), 3000);
     };
 
+    // Customer Display handlers
+    const handleSaveTitle = () => {
+        if (customerTitle.trim()) {
+            localStorage.setItem('customerDisplayTitle', customerTitle);
+        } else {
+            localStorage.removeItem('customerDisplayTitle');
+        }
+        setTitleSaved(true);
+        setTimeout(() => setTitleSaved(false), 2000);
+    };
+
+    const handleSelectVideo = async () => {
+        if (!window.electronAPI || !window.electronAPI.selectVideoFile) {
+            alert('Chức năng này chỉ hoạt động trong ứng dụng Electron.');
+            return;
+        }
+        setVideoUploading(true);
+        try {
+            const result = await window.electronAPI.selectVideoFile();
+            if (result.success && result.filePath) {
+                setCustomerVideoPath(result.filePath);
+                localStorage.setItem('customerVideoPath', result.filePath);
+            }
+        } catch (err) {
+            console.error('Failed to select video:', err);
+            alert('Lỗi khi chọn video: ' + err.message);
+        } finally {
+            setVideoUploading(false);
+        }
+    };
+
+    const handleClearVideo = () => {
+        setCustomerVideoPath('');
+        localStorage.removeItem('customerVideoPath');
+    };
+
     const renderSettings = () => (
         <div className="mgmt-settings fade-in">
             <div className="mgmt-date-bar">
@@ -704,57 +746,121 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
                 </div>
             </div>
 
-            {/* Label Printer Settings */}
+            {/* Label Printer Settings (only if enabled in POS config) */}
+            {posConfig.print_product_label && (
+                <div className="mgmt-settings-section glass-card">
+                    <h3 className="mgmt-card-title">🏷️ Máy in Tem</h3>
+                    <p className="mgmt-settings-desc">
+                        Chọn máy in để in tem sản phẩm tự động sau khi thanh toán. Nếu không chọn, hệ thống sẽ mở cửa sổ in của trình duyệt.
+                    </p>
+
+                    <div className="mgmt-printer-controls">
+                        <div className="mgmt-printer-select-row">
+                            <select
+                                className="input-field mgmt-printer-dropdown"
+                                value={selectedLabelPrinter}
+                                onChange={(e) => handleSelectLabelPrinter(e.target.value)}
+                                onFocus={() => { if (printers.length === 0) fetchPrinters(); }}
+                            >
+                                <option value="">🏷️ -- Chọn máy in tem --</option>
+                                {printers.map((p) => (
+                                    <option key={p.name} value={p.name}>
+                                        {p.name} {p.isDefault ? '(★ Mặc định)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={fetchPrinters}
+                                disabled={printersLoading}
+                                title="Làm mới danh sách máy in"
+                            >
+                                {printersLoading ? '⏳' : '🔄'}
+                            </button>
+                        </div>
+
+                        {selectedLabelPrinter && (
+                            <div className="mgmt-printer-status">
+                                <div className="mgmt-printer-current">
+                                    <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedLabelPrinter}</strong></span>
+                                    <button className="btn btn-sm btn-danger" onClick={handleClearLabelPrinter}>✕ Xóa</button>
+                                </div>
+                                <div className="mgmt-printer-actions">
+                                    <button className="btn btn-primary" onClick={handleTestLabelPrint}>
+                                        {testLabelPrintDone ? '✅ Đã gửi lệnh in!' : '🧪 In thử tem'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!selectedLabelPrinter && (
+                            <div className="mgmt-printer-hint">
+                                ℹ️ Chưa chọn máy in tem. Tem sẽ hiển popup in của trình duyệt.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Customer Display Settings */}
             <div className="mgmt-settings-section glass-card">
-                <h3 className="mgmt-card-title">🏷️ Máy in Tem</h3>
+                <h3 className="mgmt-card-title">📺 Màn hình khách hàng</h3>
                 <p className="mgmt-settings-desc">
-                    Chọn máy in để in tem sản phẩm tự động sau khi thanh toán. Nếu không chọn, hệ thống sẽ mở cửa sổ in của trình duyệt.
+                    Tùy chỉnh tiêu đề và video quảng cáo hiển thị trên màn hình khách hàng.
                 </p>
 
                 <div className="mgmt-printer-controls">
-                    <div className="mgmt-printer-select-row">
-                        <select
-                            className="input-field mgmt-printer-dropdown"
-                            value={selectedLabelPrinter}
-                            onChange={(e) => handleSelectLabelPrinter(e.target.value)}
-                            onFocus={() => { if (printers.length === 0) fetchPrinters(); }}
-                        >
-                            <option value="">🏷️ -- Chọn máy in tem --</option>
-                            {printers.map((p) => (
-                                <option key={p.name} value={p.name}>
-                                    {p.name} {p.isDefault ? '(★ Mặc định)' : ''}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={fetchPrinters}
-                            disabled={printersLoading}
-                            title="Làm mới danh sách máy in"
-                        >
-                            {printersLoading ? '⏳' : '🔄'}
-                        </button>
+                    {/* Title Setting */}
+                    <div className="mgmt-customer-field">
+                        <label className="mgmt-field-label">Tiêu đề hiển thị</label>
+                        <div className="mgmt-printer-select-row">
+                            <input
+                                type="text"
+                                className="input-field mgmt-printer-dropdown"
+                                value={customerTitle}
+                                onChange={(e) => setCustomerTitle(e.target.value)}
+                                placeholder="Ví dụ: Welcome to DannyGreen Retail"
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(); }}
+                            />
+                            <button className="btn btn-primary" onClick={handleSaveTitle}>
+                                {titleSaved ? '✅ Đã lưu!' : '💾 Lưu'}
+                            </button>
+                        </div>
+                        {!localStorage.getItem('customerDisplayTitle') && (
+                            <div className="mgmt-printer-hint">
+                                ℹ️ Chưa đặt tiêu đề. Sẽ hiển thị tên POS mặc định.
+                            </div>
+                        )}
                     </div>
 
-                    {selectedLabelPrinter && (
-                        <div className="mgmt-printer-status">
-                            <div className="mgmt-printer-current">
-                                <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedLabelPrinter}</strong></span>
-                                <button className="btn btn-sm btn-danger" onClick={handleClearLabelPrinter}>✕ Xóa</button>
-                            </div>
-                            <div className="mgmt-printer-actions">
-                                <button className="btn btn-primary" onClick={handleTestLabelPrint}>
-                                    {testLabelPrintDone ? '✅ Đã gửi lệnh in!' : '🧪 In thử tem'}
-                                </button>
-                            </div>
+                    {/* Video Setting */}
+                    <div className="mgmt-customer-field" style={{ marginTop: '16px' }}>
+                        <label className="mgmt-field-label">Video quảng cáo</label>
+                        <div className="mgmt-printer-select-row">
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSelectVideo}
+                                disabled={videoUploading}
+                            >
+                                {videoUploading ? '⏳ Đang tải...' : '📂 Chọn video từ máy'}
+                            </button>
                         </div>
-                    )}
 
-                    {!selectedLabelPrinter && (
-                        <div className="mgmt-printer-hint">
-                            ℹ️ Chưa chọn máy in tem. Tem sẽ hiển popup in của trình duyệt.
-                        </div>
-                    )}
+                        {customerVideoPath && (
+                            <div className="mgmt-printer-status">
+                                <div className="mgmt-printer-current">
+                                    <span className="mgmt-printer-badge">✅ Video: <strong>{customerVideoPath.split(/[\\/]/).pop()}</strong></span>
+                                    <button className="btn btn-sm btn-danger" onClick={handleClearVideo}>✕ Xóa</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!customerVideoPath && (
+                            <div className="mgmt-printer-hint">
+                                ℹ️ Chưa chọn video. Sẽ sử dụng video mặc định (video.mp4).
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

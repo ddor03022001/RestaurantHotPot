@@ -802,3 +802,163 @@
     border-radius: 8px;
     border: 1px dashed rgba(255, 255, 255, 0.1);
 }
+
+.mgmt-field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.mgmt-customer-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ===== Responsive: Small POS Screens ===== */
+@media (max-height: 800px) {
+    .mgmt-sidebar {
+        width: 200px;
+    }
+
+    .mgmt-sidebar-header {
+        padding: 12px 12px;
+    }
+
+    .mgmt-logo-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 22px;
+    }
+
+    .mgmt-logo-name {
+        font-size: 15px;
+    }
+
+    .mgmt-nav-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .mgmt-nav-icon {
+        font-size: 16px;
+    }
+
+    .mgmt-date-bar {
+        padding: 12px 20px 8px;
+    }
+
+    .mgmt-section-title {
+        font-size: 16px;
+    }
+
+    .mgmt-kpi-grid {
+        gap: 10px;
+        padding: 0 20px 14px;
+    }
+
+    .mgmt-kpi-card {
+        padding: 14px;
+        gap: 10px;
+    }
+
+    .mgmt-kpi-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 18px;
+    }
+
+    .mgmt-kpi-value {
+        font-size: 16px;
+    }
+
+    .mgmt-kpi-label {
+        font-size: 11px;
+    }
+
+    .mgmt-charts-row {
+        padding: 0 20px 14px;
+        gap: 10px;
+    }
+
+    .mgmt-bar-chart {
+        height: 140px;
+    }
+
+    .mgmt-recent {
+        margin: 0 20px 20px;
+        padding: 14px;
+    }
+
+    .mgmt-sidebar-footer {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .mgmt-back-btn {
+        padding: 8px !important;
+        font-size: 12px !important;
+    }
+}
+
+@media (max-height: 650px) {
+    .mgmt-sidebar {
+        width: 170px;
+    }
+
+    .mgmt-sidebar-header {
+        padding: 8px 10px;
+    }
+
+    .mgmt-logo-name {
+        font-size: 13px;
+    }
+
+    .mgmt-logo-sub {
+        font-size: 9px;
+    }
+
+    .mgmt-nav-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        gap: 8px;
+    }
+
+    .mgmt-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 0 14px 10px;
+    }
+
+    .mgmt-kpi-card {
+        padding: 10px;
+    }
+
+    .mgmt-kpi-value {
+        font-size: 14px;
+    }
+
+    .mgmt-charts-row {
+        grid-template-columns: 1fr;
+        padding: 0 14px 10px;
+    }
+
+    .mgmt-bar-chart {
+        height: 100px;
+    }
+
+    .mgmt-date-bar {
+        padding: 8px 14px 6px;
+    }
+
+    .mgmt-section-title {
+        font-size: 14px;
+    }
+
+    .mgmt-date-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+}

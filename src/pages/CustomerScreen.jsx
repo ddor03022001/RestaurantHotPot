@@ -16,6 +16,14 @@ const CustomerScreen = () => {
     const [qrLoading, setQrLoading] = useState(false);
     const prevScreenRef = useRef('idle');
 
+    // Customer Display settings (from localStorage)
+    const [brandTitle, setBrandTitle] = useState(
+        localStorage.getItem('customerDisplayTitle') || ''
+    );
+    const [videoSrc, setVideoSrc] = useState(
+        localStorage.getItem('customerVideoPath') || ''
+    );
+
     useEffect(() => {
         if (window.electronAPI && window.electronAPI.onCustomerDisplayUpdate) {
             window.electronAPI.onCustomerDisplayUpdate((data) => {
@@ -23,9 +31,31 @@ const CustomerScreen = () => {
                 setDisplayState((prev) => ({ ...prev, ...data }));
             });
         }
+
+        // Listen for localStorage changes from ManagementScreen
+        const handleStorageChange = (e) => {
+            if (e.key === 'customerDisplayTitle') {
+                setBrandTitle(e.newValue || '');
+            }
+            if (e.key === 'customerVideoPath') {
+                setVideoSrc(e.newValue || '');
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     const { screen, items, totalData } = displayState;
+
+    // Build video URL: if path is an absolute file path, convert to file:// URL
+    const resolvedVideoSrc = (() => {
+        if (!videoSrc) return './video.mp4';
+        // Absolute Windows path like C:\Users\...
+        if (/^[A-Za-z]:\\/.test(videoSrc) || videoSrc.startsWith('/')) {
+            return `file:///${videoSrc.replace(/\\/g, '/')}`;
+        }
+        return videoSrc;
+    })();
 
     // Fetch QR code when entering payment screen
     useEffect(() => {
@@ -56,10 +86,11 @@ const CustomerScreen = () => {
         <div className="customer-screen-container">
             {/* Left Promotional Panel */}
             <div className="customer-screen-left">
-                <h1 className="brand-title">Welcome to DannyGreen Retail</h1>
+                <h1 className="brand-title">{brandTitle || 'SeaPOS'}</h1>
                 <p className="brand-subtitle"></p>
                 {/* You can replace this img with an actual promotional video or carousel */}
                 <video
+                    key={resolvedVideoSrc}
                     autoPlay    // Tự động chạy
                     loop        // Lặp lại liên tục
                     muted       // Tắt tiếng (Bắt buộc phải có muted thì trình duyệt mới cho autoPlay)
@@ -74,8 +105,7 @@ const CustomerScreen = () => {
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
                     }}
                 >
-                    {/* Thay đường dẫn này bằng link video của bạn */}
-                    <source src="./video.mp4" type="video/mp4" />
+                    <source src={resolvedVideoSrc} type="video/mp4" />
 
                     {/* Dòng chữ này sẽ hiện ra nếu trình duyệt hoặc màn hình POS quá cũ không hỗ trợ video */}
                     Trình duyệt của bạn không hỗ trợ phát video.

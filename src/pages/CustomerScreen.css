@@ -304,3 +304,252 @@
         opacity: 0.5;
     }
 }
+
+/* ===== Responsive: Small POS Screens ===== */
+
+/* Height <= 800px: Standard POS (1024x768, 1280x720) */
+@media (max-height: 800px) {
+    .customer-screen-left {
+        padding: 1rem;
+    }
+
+    .brand-title {
+        font-size: 2.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .brand-subtitle {
+        font-size: 1.4rem;
+    }
+
+    .hero-image-placeholder {
+        width: 50%;
+        max-width: 400px;
+        margin-top: 1.5rem;
+    }
+
+    .customer-screen-right {
+        width: 340px;
+    }
+
+    .cart-header {
+        padding: 1rem;
+    }
+
+    .cart-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .cart-body {
+        padding: 0.7rem;
+    }
+
+    .cart-item {
+        padding: 0.7rem;
+        margin-bottom: 0.4rem;
+        border-radius: 10px;
+    }
+
+    .item-name {
+        font-size: 0.95rem;
+    }
+
+    .item-qty-price {
+        font-size: 0.8rem;
+    }
+
+    .item-total {
+        font-size: 0.95rem;
+    }
+
+    .item-original-total {
+        font-size: 0.8rem;
+    }
+
+    .cart-footer {
+        padding: 1rem;
+    }
+
+    .summary-row {
+        font-size: 0.95rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .summary-row.total {
+        font-size: 1.4rem;
+        margin-top: 0.6rem;
+        padding-top: 0.6rem;
+    }
+
+    /* Payment overlay */
+    .payment-overlay h2 {
+        font-size: 2.2rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .payment-total {
+        font-size: 3rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .payment-instructions {
+        font-size: 1.1rem;
+        padding: 1rem 2rem;
+    }
+
+    /* QR Code */
+    .qr-code-image {
+        width: 260px;
+        height: 260px;
+        border-radius: 12px;
+        padding: 6px;
+    }
+
+    .qr-scan-text {
+        font-size: 1rem;
+    }
+
+    .qr-loading {
+        font-size: 0.95rem;
+    }
+
+    .qr-spinner {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* Height <= 650px: Very small POS (800x600) */
+@media (max-height: 650px) {
+    .customer-screen-left {
+        padding: 0.5rem;
+    }
+
+    .brand-title {
+        font-size: 2rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .brand-subtitle {
+        font-size: 1rem;
+    }
+
+    .hero-image-placeholder {
+        width: 40%;
+        max-width: 250px;
+        margin-top: 0.8rem;
+        border-radius: 12px;
+    }
+
+    .customer-screen-right {
+        width: 280px;
+    }
+
+    .cart-header {
+        padding: 0.6rem;
+    }
+
+    .cart-header h2 {
+        font-size: 1rem;
+    }
+
+    .cart-body {
+        padding: 0.5rem;
+    }
+
+    .cart-item {
+        padding: 0.5rem;
+        margin-bottom: 0.3rem;
+        border-radius: 8px;
+    }
+
+    .item-name {
+        font-size: 0.8rem;
+    }
+
+    .item-qty-price {
+        font-size: 0.7rem;
+    }
+
+    .item-total {
+        font-size: 0.8rem;
+    }
+
+    .cart-footer {
+        padding: 0.6rem;
+    }
+
+    .summary-row {
+        font-size: 0.8rem;
+    }
+
+    .summary-row.total {
+        font-size: 1.1rem;
+    }
+
+    /* Payment overlay */
+    .payment-overlay h2 {
+        font-size: 1.6rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .payment-total {
+        font-size: 2.2rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .payment-instructions {
+        font-size: 0.9rem;
+        padding: 0.7rem 1.5rem;
+        border-radius: 30px;
+    }
+
+    .qr-code-image {
+        width: 180px;
+        height: 180px;
+        border-radius: 10px;
+    }
+
+    .qr-code-section {
+        margin-bottom: 1rem;
+    }
+
+    .qr-scan-text {
+        font-size: 0.85rem;
+    }
+}
+
+/* Width <= 1100px */
+@media (max-width: 1100px) {
+    .customer-screen-right {
+        width: 300px;
+    }
+
+    .brand-title {
+        font-size: 3rem;
+    }
+
+    .brand-subtitle {
+        font-size: 1.5rem;
+    }
+}
+
+/* Width <= 900px */
+@media (max-width: 900px) {
+    .customer-screen-right {
+        width: 250px;
+    }
+
+    .brand-title {
+        font-size: 2.4rem;
+    }
+
+    .brand-subtitle {
+        font-size: 1.2rem;
+    }
+
+    .qr-code-image {
+        width: 200px;
+        height: 200px;
+    }
+}

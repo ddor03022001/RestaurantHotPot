@@ -204,7 +204,7 @@ class OdooService {
         const products = await OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'type', 'image_medium', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids', 'print_product_label', 'uom_id'],
+                fields: ['id', 'name', 'type', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids', 'print_product_label', 'uom_id'],
             }
         );
 
@@ -341,17 +341,22 @@ class OdooService {
                 fields: ['id', 'name', 'phone', 'mobile', 'email', 'street', 'group_ids', 'pos_loyalty_point', 'company_type', 'vat'],
             }
         );
-        const groups = await OdooService._execute(url, db, uid, password, 'res.partner.group', 'search_read',
-            [[]],
-            { fields: ['id', 'name', 'pricelist_id'] }
-        );
-        for (const pl of customers) {
-            if (pl.group_ids && pl.group_ids.length > 0) {
-                const group = groups.find(g => g.id === pl.group_ids[0]);
-                if (group) {
-                    pl.group_id = group;
+        // Group lookup is optional — custom module may not exist
+        try {
+            const groups = await OdooService._execute(url, db, uid, password, 'res.partner.group', 'search_read',
+                [[]],
+                { fields: ['id', 'name', 'pricelist_id'] }
+            );
+            for (const pl of customers) {
+                if (pl.group_ids && pl.group_ids.length > 0) {
+                    const group = groups.find(g => g.id === pl.group_ids[0]);
+                    if (group) {
+                        pl.group_id = group;
+                    }
                 }
             }
+        } catch (groupErr) {
+            console.warn('res.partner.group not available, skipping group lookup:', groupErr.message);
         }
         return customers;
     }

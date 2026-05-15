@@ -152,7 +152,7 @@ function StockTransferPopup({ show, onClose, products = [], posData = {}, posCon
     if (!show) return null;
 
     return (
-        <div className="order-popup-overlay" onClick={handleClose}>
+        <div className="order-popup-overlay">
             <div className="stock-transfer-popup" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="stock-transfer-header">

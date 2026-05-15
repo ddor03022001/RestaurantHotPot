@@ -444,10 +444,10 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             staffName: selectedSeller?.name || '',
             companyInvoice: selectedInvoiceCustomer?.name || '',
             lines: orderItems.map(item => ({
-                name: item.product.display_name || item.product.name,
+                name: item.product.name || item.product.display_name,
                 priceUnit: getProductPrice(item.product),
                 qty: item.quantity,
-                discount: item.discount?.type === 'percent' ? item.discount.value : 0,
+                discount: item.discount?.type === 'percent' ? item.discount.value + '%' : formatPrice(item.discount.value),
                 subtotal: getItemTotal(item),
                 uom: item.product.uom_id ? item.product.uom_id[1] : 'Cái',
             })),
@@ -488,7 +488,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         <div className="payment-screen">
             {/* Payment Confirmation Popup */}
             {showPayConfirm && (
-                <div className="popup-overlay" onClick={() => setShowPayConfirm(false)}>
+                <div className="popup-overlay">
                     <div className="popup-card slide-up" style={{ borderRadius: '20px' }} onClick={e => e.stopPropagation()}>
                         <div className="popup-header">
                             <h3 className="popup-title" style={{ padding: '10px' }}>🤔 Xác nhận thanh toán</h3>
@@ -794,7 +794,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                             >
                                 🛒 TMĐT Code {ecommerceCode && ecommerceCode.trim() ? '✓' : ''}
                             </button>
-                            {posConfig.print_product_label && (
+                            {/* {posConfig.print_product_label && (
                                 <button
                                     className="btn btn-secondary payment-print-btn"
                                     onClick={() => setShowLabelPopup(true)}
@@ -802,7 +802,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                 >
                                     🏷️ In tem
                                 </button>
-                            )}
+                            )} */}
                         </div>
                         <div className="payment-actions-row">
                             <button
@@ -834,7 +834,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
             {/* Note Popup */}
             {showNotePopup && (
-                <div className="popup-overlay" onClick={() => setShowNotePopup(false)}>
+                <div className="popup-overlay">
                     <div className="glass-card popup-card" style={{ width: '400px', padding: '20px', borderRadius: '16px' }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>📝 Ghi chú đơn hàng</h3>
@@ -861,7 +861,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
             {/* Ecommerce Code Popup */}
             {showEcommerceCodePopup && (
-                <div className="popup-overlay" onClick={() => setShowEcommerceCodePopup(false)}>
+                <div className="popup-overlay">
                     <div className="glass-card popup-card" style={{ width: '400px', padding: '20px', borderRadius: '16px' }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>🛒 Ecommerce Code</h3>
@@ -899,7 +899,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
             {/* Invoice Customer Selection Popup */}
             {showInvoiceCustomerPopup && (
-                <div className="popup-overlay" onClick={() => setShowInvoiceCustomerPopup(false)}>
+                <div className="popup-overlay">
                     <div className="popup-card invoice-popup-card slide-up" style={{ maxWidth: '700px', width: '95%', height: '80%' }} onClick={e => e.stopPropagation()}>
                         <div className="invoice-popup-header">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -983,7 +983,7 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
 
             {/* Seller Selection Popup */}
             {showSellerPopup && (
-                <div className="popup-overlay" onClick={() => setShowSellerPopup(false)}>
+                <div className="popup-overlay">
                     <div className="popup-card slide-up seller-popup" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
                         <div className="popup-header">
                             <h3 className="popup-title">👤 Chọn người bán hàng</h3>

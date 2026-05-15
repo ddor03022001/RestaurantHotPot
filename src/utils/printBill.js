@@ -50,7 +50,7 @@ export function generateBillHTML({
             <td class="col-left">${fmt(line.priceUnit)}<span class="currency">đ</span></td>
             <td style="text-align:center">${line.qty}</td>
             <td style="text-align:center">${line.uom || 'Cái'}</td>
-            <td style="text-align:center">${line.discount > 0 ? line.discount + '%' : '0'}</td>
+            <td style="text-align:center">${line.discount || '0%'}</td>
             <td class="col-right">${fmt(line.subtotal)}<span class="currency">đ</span></td>
         </tr>
     `).join('');

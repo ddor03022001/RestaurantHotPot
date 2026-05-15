@@ -344,7 +344,7 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
 
             {/* Popup: Confirm close session */}
             {popup && popup.type === 'confirm-close-session' && (
-                <div className="popup-overlay" onClick={closePopup}>
+                <div className="popup-overlay">
                     <div className="popup-card glass-card slide-up" onClick={(e) => e.stopPropagation()}>
                         <div className="popup-icon">🔒</div>
                         <h2 className="popup-title">Đóng ca POS?</h2>
@@ -390,7 +390,7 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
             />
             {/* Merge Popup */}
             {showMergePopup && (
-                <div className="popup-overlay" onClick={() => setShowMergePopup(false)}>
+                <div className="popup-overlay">
                     <div className="popup-card slide-up" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
                         <div className="popup-header">
                             <h3 className="popup-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -439,7 +439,7 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
 
             {/* Split Popup */}
             {showSplitPopup && (
-                <div className="popup-overlay" onClick={() => setShowSplitPopup(false)}>
+                <div className="popup-overlay">
                     <div className="popup-card slide-up" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '90vw' }}>
                         <div className="popup-header">
                             <h3 className="popup-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>

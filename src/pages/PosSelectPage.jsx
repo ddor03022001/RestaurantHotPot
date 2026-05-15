@@ -53,6 +53,22 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
         }
     };
 
+    // Retry helper: tries fn up to maxRetries times with delay between attempts
+    const retryAsync = async (fn, maxRetries = 2, delayMs = 1500) => {
+        let lastError;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await fn();
+            } catch (err) {
+                lastError = err;
+                if (attempt < maxRetries) {
+                    await new Promise(r => setTimeout(r, delayMs));
+                }
+            }
+        }
+        throw lastError;
+    };
+
     const handleOpenPos = async (config) => {
         if (config._status === 'locked') return; // Can't open others' session
 
@@ -74,43 +90,95 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
             }
 
             // Load products, customers, categories, pricelists, promotions
-            setLoadingMessage('Đang tải sản phẩm...');
+            setLoadingMessage('Đang tải dữ liệu POS...');
             let products = [], customers = [], categories = [], pricelists = [], promotions = [], paymentJournals = [], tables = [], transactionTypes = [];
+            const loadWarnings = []; // Track partial failures
 
             if (window.electronAPI) {
+                // Load each data source with retry, collecting warnings for failures
+                const loadWithRetry = async (label, fn) => {
+                    try {
+                        return await retryAsync(fn, 2, 1500);
+                    } catch (err) {
+                        console.error(`[POS Load] ${label} failed after retries:`, err.message);
+                        loadWarnings.push(label);
+                        return null;
+                    }
+                };
+
+                setLoadingMessage('Đang tải sản phẩm, khách hàng...');
                 const [prodResult, custResult, catResult, plResult, promoResult, journalResult] = await Promise.all([
-                    window.electronAPI.getProducts(),
-                    window.electronAPI.getCustomers(),
-                    window.electronAPI.getPosCategories(),
-                    window.electronAPI.getPricelists(config.available_pricelist_ids || []),
-                    window.electronAPI.getPromotions(),
-                    window.electronAPI.getPaymentJournals(config.journal_ids || []),
+                    loadWithRetry('Sản phẩm', () => window.electronAPI.getProducts()),
+                    loadWithRetry('Khách hàng', () => window.electronAPI.getCustomers()),
+                    loadWithRetry('Danh mục', () => window.electronAPI.getPosCategories()),
+                    loadWithRetry('Bảng giá', () => window.electronAPI.getPricelists(config.available_pricelist_ids || [])),
+                    loadWithRetry('Khuyến mãi', () => window.electronAPI.getPromotions()),
+                    loadWithRetry('Phương thức TT', () => window.electronAPI.getPaymentJournals(config.journal_ids || [])),
                 ]);
+
+                // Critical: products must load
+                if (!prodResult || !prodResult.success) {
+                    setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại.');
+                    setOpeningId(null);
+                    return;
+                }
+
                 products = prodResult.success ? prodResult.products : [];
-                customers = custResult.success ? custResult.customers : [];
-                categories = catResult.success ? catResult.categories : [];
-                pricelists = plResult.success ? plResult.pricelists : [];
-                promotions = promoResult.success ? promoResult.promotions : [];
-                paymentJournals = journalResult.success ? journalResult.journals : [];
+                customers = custResult && custResult.success ? custResult.customers : [];
+                categories = catResult && catResult.success ? catResult.categories : [];
+                pricelists = plResult && plResult.success ? plResult.pricelists : [];
+                promotions = promoResult && promoResult.success ? promoResult.promotions : [];
+                paymentJournals = journalResult && journalResult.success ? journalResult.journals : [];
+
+                // Check for API-level failures (success: false)
+                if (custResult && !custResult.success) loadWarnings.push('Khách hàng');
+                if (catResult && !catResult.success) loadWarnings.push('Danh mục');
+                if (plResult && !plResult.success) loadWarnings.push('Bảng giá');
+                if (promoResult && !promoResult.success) loadWarnings.push('Khuyến mãi');
+                if (journalResult && !journalResult.success) loadWarnings.push('Phương thức TT');
+
+                // Load stock quantities
+                setLoadingMessage('Đang tải tồn kho...');
                 const storableProducts = products.filter(p => p.type === 'product');
                 if (storableProducts.length > 0) {
-                    const stockResult = await window.electronAPI.getStockProducts(storableProducts.map(p => p.id), [config.stock_location_id[0]]);
-                    if (stockResult.success && Array.isArray(stockResult.result)) {
-                        const stockMap = {};
-                        stockResult.result.forEach(s => {
-                            const id = Array.isArray(s.product_id) ? s.product_id[0] : s.product_id;
-                            stockMap[id] = s.quantity;
-                        });
-                        products = products.map(p => ({
-                            ...p,
-                            qty_available: p.type === 'product' ? (stockMap[p.id] || 0) : undefined
-                        }));
+                    try {
+                        const stockResult = await retryAsync(
+                            () => window.electronAPI.getStockProducts(storableProducts.map(p => p.id), [config.stock_location_id[0]]),
+                            1, 1000
+                        );
+                        if (stockResult.success && Array.isArray(stockResult.result)) {
+                            const stockMap = {};
+                            stockResult.result.forEach(s => {
+                                const id = Array.isArray(s.product_id) ? s.product_id[0] : s.product_id;
+                                stockMap[id] = s.quantity;
+                            });
+                            products = products.map(p => ({
+                                ...p,
+                                qty_available: p.type === 'product' ? (stockMap[p.id] || 0) : undefined
+                            }));
+                        }
+                    } catch (stockErr) {
+                        console.warn('[POS Load] Stock load failed:', stockErr.message);
+                        loadWarnings.push('Tồn kho');
                     }
                 }
-                const resultTable = await window.electronAPI.getTables(config.id);
-                tables = resultTable.success ? resultTable.result : [];
-                const resultTransactionTypes = await window.electronAPI.getTransactionTypes();
-                transactionTypes = resultTransactionTypes.success ? resultTransactionTypes.result : [];
+
+                // Load tables
+                setLoadingMessage('Đang tải bàn...');
+                try {
+                    const resultTable = await retryAsync(() => window.electronAPI.getTables(config.id), 1, 1000);
+                    tables = resultTable.success ? resultTable.result : [];
+                } catch (tableErr) {
+                    console.warn('[POS Load] Tables load failed:', tableErr.message);
+                }
+
+                // Load transaction types
+                try {
+                    const resultTransactionTypes = await retryAsync(() => window.electronAPI.getTransactionTypes(), 1, 1000);
+                    transactionTypes = resultTransactionTypes.success ? resultTransactionTypes.result : [];
+                } catch (ttErr) {
+                    console.warn('[POS Load] Transaction types load failed:', ttErr.message);
+                }
             } else {
                 // Browser mock data
                 await new Promise((r) => setTimeout(r, 600));
@@ -154,6 +222,16 @@ function PosSelectPage({ authData, onSelectPos, onLogout }) {
                     { id: 2, name: 'Ngân hàng', type: 'bank', code: 'BNK' },
                     { id: 3, name: 'Chuyển khoản', type: 'bank', code: 'TRF' },
                 ];
+            }
+
+            // Show warning if some data failed to load
+            if (loadWarnings.length > 0) {
+                const uniqueWarnings = [...new Set(loadWarnings)];
+                console.warn('[POS] Partial load failures:', uniqueWarnings.join(', '));
+                // Brief alert so user knows — non-blocking
+                setTimeout(() => {
+                    alert(`⚠️ Một số dữ liệu tải không thành công: ${uniqueWarnings.join(', ')}.\n\nBạn vẫn có thể sử dụng POS nhưng dữ liệu trên có thể trống. Hãy đóng POS và mở lại nếu cần.`);
+                }, 500);
             }
 
             setLoadingMessage('');

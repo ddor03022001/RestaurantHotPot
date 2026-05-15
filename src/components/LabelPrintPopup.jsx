@@ -189,7 +189,7 @@ function LabelPrintPopup({ show, onClose, orderItems, posConfig, ecommerceCode }
     };
 
     return (
-        <div className="order-popup-overlay" onClick={onClose}>
+        <div className="order-popup-overlay">
             <style>{BARCODE_LABEL_STYLES}</style>
             <div className="label-popup" onClick={(e) => e.stopPropagation()}>
                 <div className="label-popup-header">

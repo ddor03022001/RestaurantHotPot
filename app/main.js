@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, dialog, protocol, net } = require('electron');
 const path = require('path');
 const OdooService = require('./odooService');
 const { autoUpdater } = require('electron-updater');
@@ -11,7 +11,7 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1400,
         height: 900,
-        minWidth: 1100,
+        minWidth: 1024,
         minHeight: 768,
         title: 'SeaPos - Restaurant POS',
         show: false,
@@ -546,7 +546,19 @@ ipcMain.handle('app:getDataPath', () => {
 
 // ========== App Lifecycle ==========
 
+// Register custom scheme BEFORE app is ready (required for streaming media)
+protocol.registerSchemesAsPrivileged([
+    { scheme: 'local-video', privileges: { stream: true, bypassCSP: true } }
+]);
+
 app.whenReady().then(() => {
+    // Register custom protocol to serve local video files safely
+    protocol.registerFileProtocol('local-video', (request, callback) => {
+        const url = request.url.replace('local-video://', '');
+        const filePath = decodeURIComponent(url);
+        callback({ path: filePath });
+    });
+
     createWindow();
 
     // --- KIỂM TRA UPDATE SAU KHI APP MỞ 2 GIÂY ---

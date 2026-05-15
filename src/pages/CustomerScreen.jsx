@@ -47,12 +47,13 @@ const CustomerScreen = () => {
 
     const { screen, items, totalData } = displayState;
 
-    // Build video URL: if path is an absolute file path, convert to file:// URL
+    // Build video URL: if path is an absolute file path, convert to local-video:// URL
+    // (Electron blocks file:// in renderer, so we use a custom protocol registered in main.js)
     const resolvedVideoSrc = (() => {
         if (!videoSrc) return './video.mp4';
         // Absolute Windows path like C:\Users\...
         if (/^[A-Za-z]:\\/.test(videoSrc) || videoSrc.startsWith('/')) {
-            return `file:///${videoSrc.replace(/\\/g, '/')}`;
+            return `local-video://${videoSrc.replace(/\\/g, '/')}`;
         }
         return videoSrc;
     })();

@@ -225,10 +225,10 @@ function OrderHistoryPopup({
             dateStr: `${orderDate.toLocaleDateString('vi-VN')} ${orderDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
             customerName: getCustomerName(selectedOrder.partner_id),
             lines: orderLines.map(line => ({
-                name: getProductName(line.product_id),
+                name: getProductById(line.product_id[0])?.name,
                 priceUnit: line.price_unit,
                 qty: line.qty,
-                discount: line.discount || 0,
+                discount: line.discount_type === 'percent' ? line.discount + '%' : formatPrice(line.discount_amount),
                 subtotal: Math.round(line.price_subtotal_incl),
                 uom: line.uom_id ? line.uom_id[1] : 'Cái',
             })),
@@ -246,7 +246,7 @@ function OrderHistoryPopup({
     }
 
     return (
-        <div className="order-popup-overlay" onClick={onClose}>
+        <div className="order-popup-overlay">
             <div className="history-popup glass-card slide-up" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="history-popup-header">
@@ -399,7 +399,7 @@ function OrderHistoryPopup({
                                     {orderLines.map((line) => (
                                         <div key={line.id} className="history-table-row" style={{ cursor: 'default' }}>
                                             <span className="ht-col" style={{ flex: 3, color: 'var(--text-primary)', fontWeight: 600 }}>
-                                                {getProductName(line.product_id)}
+                                                {getProductById(line.product_id[0])?.name}
                                             </span>
                                             <span className="ht-col" style={{ flex: 0.5, textAlign: 'center' }}>{line.qty}</span>
                                             <span className="ht-col" style={{ flex: 1, textAlign: 'right' }}>{formatPrice(line.price_unit)}</span>

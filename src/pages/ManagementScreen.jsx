@@ -624,8 +624,8 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
             customerName: 'Khách thử nghiệm',
             staffName: authData?.user?.name || 'Admin',
             lines: [
-                { name: 'Sản phẩm mẫu A', priceUnit: 50000, qty: 2, discount: 0, subtotal: 100000, uom: 'Cái' },
-                { name: 'Sản phẩm mẫu B', priceUnit: 30000, qty: 1, discount: 10, subtotal: 27000, uom: 'Kg' },
+                { name: 'Sản phẩm mẫu A', priceUnit: 50000, qty: 2, discount: 0 + '%', subtotal: 100000, uom: 'Cái' },
+                { name: 'Sản phẩm mẫu B', priceUnit: 30000, qty: 1, discount: 10 + '%', subtotal: 27000, uom: 'Kg' },
             ],
             totalAmount: 127000,
             discountAmount: 3000,
@@ -728,7 +728,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
                         <div className="mgmt-printer-status">
                             <div className="mgmt-printer-current">
                                 <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedPrinter}</strong></span>
-                                <button className="btn btn-sm btn-danger" onClick={handleClearPrinter}>✕ Xóa</button>
+                                <button className="btn btn-sm btn-danger" onClick={handleClearPrinter}>Xóa</button>
                             </div>
                             <div className="mgmt-printer-actions">
                                 <button className="btn btn-primary" onClick={handleTestPrint}>
@@ -783,7 +783,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
                             <div className="mgmt-printer-status">
                                 <div className="mgmt-printer-current">
                                     <span className="mgmt-printer-badge">✅ Đang sử dụng: <strong>{selectedLabelPrinter}</strong></span>
-                                    <button className="btn btn-sm btn-danger" onClick={handleClearLabelPrinter}>✕ Xóa</button>
+                                    <button className="btn btn-sm btn-danger" onClick={handleClearLabelPrinter}>Xóa</button>
                                 </div>
                                 <div className="mgmt-printer-actions">
                                     <button className="btn btn-primary" onClick={handleTestLabelPrint}>
@@ -850,7 +850,7 @@ function ManagementScreen({ authData, posConfig, posData, onBack }) {
                             <div className="mgmt-printer-status">
                                 <div className="mgmt-printer-current">
                                     <span className="mgmt-printer-badge">✅ Video: <strong>{customerVideoPath.split(/[\\/]/).pop()}</strong></span>
-                                    <button className="btn btn-sm btn-danger" onClick={handleClearVideo}>✕ Xóa</button>
+                                    <button className="btn btn-sm btn-danger" onClick={handleClearVideo}>Xóa</button>
                                 </div>
                             </div>
                         )}

@@ -6,10 +6,10 @@ import { useOrderHistory } from '../hooks/useOrderHistory';
 import './OrderScreen.css';
 
 // Stable popup component (outside OrderScreen to avoid re-creation on every render)
-function PopupOverlay({ show, onClose, title, className, children }) {
+function PopupOverlay({ show, onClose, title, className, children, dismissable = false }) {
     if (!show) return null;
     return (
-        <div className="order-popup-overlay" onClick={onClose}>
+        <div className="order-popup-overlay" onClick={dismissable ? onClose : undefined}>
             <div className={`order-popup ${className || ''}`} onClick={(e) => e.stopPropagation()}>
                 <div className="order-popup-header">
                     <h3 className="order-popup-title">{title}</h3>
@@ -22,6 +22,7 @@ function PopupOverlay({ show, onClose, title, className, children }) {
         </div>
     );
 }
+
 
 function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack, onLogout, onGoToPayment, posMode, onToggleMode, onCloseSession, onGoToManagement, onRefreshStock, offlineQueue }) {
     const isRetail = posMode === 'retail';
@@ -46,6 +47,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
     const [productionSearch, setProductionSearch] = useState('');
     const [isProducing, setIsProducing] = useState(false);
     const [productionError, setProductionError] = useState('');
+    const [productionSuccess, setProductionSuccess] = useState(null); // { productName, qty, materialCount }
 
     // Label printing state
 
@@ -110,16 +112,6 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
         setProductionError('');
 
         try {
-            // Build raw_material_ids expected by Odoo
-            // const materialIds = selectedProduction.mrpComponents.map(m => {
-            //     const qty = materialQtys[m.id] || 0;
-            //     // Structure expected: [0, 0, { product_id: ID, qty: QTY }]
-            //     return [0, 0, {
-            //         product_id: m.componentId,
-            //         qty: qty
-            //     }];
-            // });
-
             // Fallbacks for config fields if missing
             const branchId = posConfig.pos_branch_id ? posConfig.pos_branch_id[0] : false;
             const locationId = posConfig.stock_location_id ? posConfig.stock_location_id[0] : false;
@@ -140,8 +132,16 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             );
 
             if (res.success) {
+                // Show success popup
+                setProductionSuccess({
+                    productName: selectedProduction.display_name || selectedProduction.name,
+                    qty: productionQty,
+                    materialCount: selectedProduction.mrpComponents.length,
+                });
                 setShowProductionPopup(false);
                 setSelectedProduction(null);
+                // Refresh stock after production
+                if (onRefreshStock) onRefreshStock();
             } else {
                 setProductionError(res.error || 'Lỗi tạo đơn sản xuất');
             }
@@ -724,7 +724,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                         className={`order-toolbar-btn ${customerDisplayOn ? 'order-toolbar-btn-active' : ''}`}
                         onClick={toggleCustomerDisplay}
                     >
-                        🖥️ Khách hàng
+                        🖥️ Màn hình phụ
                     </button>
                 </div>
 
@@ -1064,7 +1064,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             </div>
 
             {/* ===== POPUP: Customer selector ===== */}
-            <PopupOverlay show={showCustomerPopup} onClose={() => setShowCustomerPopup(false)} title="👤 Chọn khách hàng" className="order-popup-wide">
+            <PopupOverlay show={showCustomerPopup} onClose={() => setShowCustomerPopup(false)} title="👤 Chọn khách hàng" className="order-popup-wide" dismissable>
                 <div className="popup-search popup-search-with-btn">
                     <input
                         type="text"
@@ -1186,7 +1186,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             </PopupOverlay>
 
             {/* ===== POPUP: Pricelist selector ===== */}
-            <PopupOverlay show={showPricelistPopup} onClose={() => setShowPricelistPopup(false)} title="💲 Chọn bảng giá">
+            <PopupOverlay show={showPricelistPopup} onClose={() => setShowPricelistPopup(false)} title="💲 Chọn bảng giá" dismissable>
                 <div className="popup-list">
                     <div
                         className={`popup-list-item ${!selectedPricelist ? 'popup-list-item-active' : ''}`}
@@ -1214,7 +1214,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             </PopupOverlay>
 
             {/* ===== POPUP: Promotion selector ===== */}
-            <PopupOverlay show={showPromotionPopup} onClose={() => setShowPromotionPopup(false)} title="🎁 Chọn chương trình khuyến mãi">
+            <PopupOverlay show={showPromotionPopup} onClose={() => setShowPromotionPopup(false)} title="🎁 Chọn chương trình khuyến mãi" dismissable>
                 <div className="popup-list">
                     <div
                         className={`popup-list-item ${!selectedPromotion ? 'popup-list-item-active' : ''}`}
@@ -1250,7 +1250,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
             {/* ===== POPUP: Combo product selector ===== */}
             {comboPopup && (
-                <div className="popup-overlay" onClick={() => { setComboPopup(null); setComboSelections({}); }}>
+                <div className="popup-overlay">
                     <div className="combo-popup glass-card slide-up" onClick={(e) => e.stopPropagation()}>
                         <div className="combo-header">
                             <h2 className="combo-title">🍱 {comboPopup.comboInfo.name}</h2>
@@ -1317,7 +1317,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
             {/* ===== POPUP: Production ===== */}
             {showProductionPopup && (
-                <div className="popup-overlay" onClick={() => { setShowProductionPopup(false); setSelectedProduction(null); }}>
+                <div className="popup-overlay">
                     <div className="production-popup glass-card slide-up" onClick={(e) => e.stopPropagation()}>
                         <div className="production-header">
                             <h2 className="production-title">🏭 Sản xuất</h2>
@@ -1433,7 +1433,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
             )}
             {/* Custom Production Confirm Popup */}
             {showProduceConfirm && (
-                <div className="popup-overlay" onClick={() => setShowProduceConfirm(false)} style={{ zIndex: 2000 }}>
+                <div className="popup-overlay" style={{ zIndex: 2000 }}>
                     <div className="glass-card popup-card" style={{ width: '400px', padding: '24px', borderRadius: '16px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤔</div>
                         <h3 style={{ margin: '0 0 12px 0', fontSize: '20px', fontWeight: 'bold' }}>Xác nhận sản xuất</h3>
@@ -1450,6 +1450,36 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                 Đồng ý tạo
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== Production Success Popup ===== */}
+            {productionSuccess && (
+                <div className="production-result-overlay">
+                    <div className="production-result-card production-result-success" onClick={(e) => e.stopPropagation()}>
+                        <div className="production-result-icon-wrapper">
+                            <div className="production-result-icon production-result-icon-ok">✓</div>
+                            <div className="production-result-ring production-result-ring-ok"></div>
+                        </div>
+                        <h3 className="production-result-title">Sản xuất thành công!</h3>
+                        <p className="production-result-desc">
+                            Đã tạo đơn sản xuất <strong>{productionSuccess.productName}</strong> thành công
+                        </p>
+                        <div className="production-result-stats">
+                            <div className="production-result-stat">
+                                <span className="production-result-stat-value">{productionSuccess.qty}</span>
+                                <span className="production-result-stat-label">Số lượng</span>
+                            </div>
+                            <div className="production-result-stat-divider"></div>
+                            <div className="production-result-stat">
+                                <span className="production-result-stat-value">{productionSuccess.materialCount}</span>
+                                <span className="production-result-stat-label">Nguyên liệu</span>
+                            </div>
+                        </div>
+                        <button className="btn btn-primary production-result-btn" onClick={() => setProductionSuccess(null)}>
+                            Đóng
+                        </button>
                     </div>
                 </div>
             )}
@@ -1476,7 +1506,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
             {/* ===== RETAIL MODE: Close Session Popup ===== */}
             {isRetail && showCloseSessionPopup && (
-                <div className="order-popup-overlay" onClick={() => setShowCloseSessionPopup(false)}>
+                <div className="order-popup-overlay">
                     <div className="order-popup" style={{ padding: '20px' }} onClick={(e) => e.stopPropagation()}>
                         <div className="order-popup-header">
                             <h3 className="order-popup-title">🔒 Đóng ca POS?</h3>
@@ -1525,7 +1555,7 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
 
             {/* ===== Offline Queue Popup ===== */}
             {showOfflineQueuePopup && (
-                <div className="order-popup-overlay" onClick={() => setShowOfflineQueuePopup(false)}>
+                <div className="order-popup-overlay">
                     <div className="order-popup offline-queue-popup" style={{ padding: '15px' }} onClick={(e) => e.stopPropagation()}>
                         <div className="order-popup-header">
                             <h3 className="order-popup-title">

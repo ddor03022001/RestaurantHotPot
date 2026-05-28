@@ -79,6 +79,38 @@ export function useOfflineQueue() {
         return { success: successCount, failed: failCount };
     }, [failedOrders]);
 
+    // Retry sending a single failed order by ID
+    const retrySingle = useCallback(async (id) => {
+        if (!window.electronAPI?.createPosOrder) {
+            return { success: false, error: 'API không khả dụng' };
+        }
+
+        const entry = failedOrders.find(o => o.id === id);
+        if (!entry) return { success: false, error: 'Không tìm thấy đơn' };
+
+        setIsRetrying(true);
+        try {
+            const res = await window.electronAPI.createPosOrder(entry.orderData);
+            if (res.success) {
+                setFailedOrders(prev => prev.filter(o => o.id !== id));
+                setIsRetrying(false);
+                return { success: true };
+            } else {
+                setFailedOrders(prev => prev.map(o =>
+                    o.id === id ? { ...o, error: res.error || 'Unknown error', lastRetry: new Date().toISOString() } : o
+                ));
+                setIsRetrying(false);
+                return { success: false, error: res.error };
+            }
+        } catch (err) {
+            setFailedOrders(prev => prev.map(o =>
+                o.id === id ? { ...o, error: err.message || 'Unknown error', lastRetry: new Date().toISOString() } : o
+            ));
+            setIsRetrying(false);
+            return { success: false, error: err.message };
+        }
+    }, [failedOrders]);
+
     // Remove a single order from the queue
     const removeOrder = useCallback((id) => {
         setFailedOrders(prev => prev.filter(o => o.id !== id));
@@ -95,6 +127,7 @@ export function useOfflineQueue() {
         isRetrying,
         addFailedOrder,
         retryAll,
+        retrySingle,
         removeOrder,
         clearAll,
     };

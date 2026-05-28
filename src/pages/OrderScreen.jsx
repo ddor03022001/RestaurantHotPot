@@ -1628,14 +1628,24 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                                         </div>
                                                     )}
                                                 </div>
-                                                <button
-                                                    className="offline-queue-item-remove"
-                                                    onClick={() => offlineQueue.removeOrder(entry.id)}
-                                                    title="Xóa đơn này"
-                                                    disabled={offlineQueue.isRetrying}
-                                                >
-                                                    ✕
-                                                </button>
+                                                <div className="offline-queue-item-actions">
+                                                    <button
+                                                        className="offline-queue-item-retry"
+                                                        onClick={(e) => { e.stopPropagation(); offlineQueue.retrySingle(entry.id); }}
+                                                        title="Gửi lại đơn này"
+                                                        disabled={offlineQueue.isRetrying}
+                                                    >
+                                                        🔄
+                                                    </button>
+                                                    <button
+                                                        className="offline-queue-item-remove"
+                                                        onClick={(e) => { e.stopPropagation(); offlineQueue.removeOrder(entry.id); }}
+                                                        title="Xóa đơn này"
+                                                        disabled={offlineQueue.isRetrying}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

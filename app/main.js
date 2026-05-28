@@ -398,7 +398,7 @@ ipcMain.handle('get-api-qrcode', async (_, totalAmount) => {
             method: 'POST',
             headers: {
                 'x-api-key': '106f81f6-abff-42ea-9b1b-c07538846b6e',
-                'x-client-id': '51e98ca7-e8f7-497b-bf0f-e0e0b8d8d404',
+                'x-client-id': '106f81f6-abff-42ea-9b1b-c07538846b6e',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { formatPrice } from '../utils/formatters';
 import { printBill } from '../utils/printBill';
 import { printLabel } from '../utils/printLabel';
@@ -90,6 +90,14 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [showLabelPopup, setShowLabelPopup] = useState(false);
     const [selectedSeller, setSelectedSeller] = useState(null);
     const [showSellerPopup, setShowSellerPopup] = useState(false);
+
+    // Background sync status for toast notification
+    const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'success' | 'failed'
+    const [syncError, setSyncError] = useState('');
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const [selectedInvoiceCustomer, setSelectedInvoiceCustomer] = useState(null);
     const [showInvoiceCustomerPopup, setShowInvoiceCustomerPopup] = useState(false);
@@ -214,109 +222,115 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
         setShowPayConfirm(true);
     };
 
-    const handleConfirmPayment = async () => {
+    const handleConfirmPayment = () => {
         setShowPayConfirm(false);
         setProcessing(true);
-        let orderData = null;
-        let uidId = '';
-        try {
-            // Find statement_ids for chosen payment journals under the current open session
-            const statementIds = [];
-            for (const pl of paymentLines) {
-                const stResp = await window.electronAPI.executeKw(
-                    'account.bank.statement', 'search_read',
-                    [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', pl.journalId]]],
-                    { fields: ['id'], limit: 1 }
-                );
 
-                let statementId = false;
-                if (stResp.success && stResp.result && stResp.result.length > 0) {
-                    statementId = stResp.result[0].id;
-                }
+        // === PHASE 1: Instant UI — generate uidId, show success, print ===
+        const now = new Date();
+        const hour = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const second = String(now.getSeconds()).padStart(2, '0');
+        const timeString = `${hour}${minutes}${second}`;
+        const uidId = `${timeString}-${posConfig.session.id}-${authData.user.uid}`;
 
-                statementIds.push([0, 0, {
-                    journal_id: pl.journalId,
-                    amount: pl.amount,
-                    name: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                    statement_id: statementId
-                }]);
-            }
-            // check loyalty
-            const defaultPl = paymentJournals.find(pl => pl.code === 'LOYAL') || null;
-            if (defaultPl && localUsedPoints > 0) {
-                const stResp = await window.electronAPI.executeKw(
-                    'account.bank.statement', 'search_read',
-                    [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', defaultPl.id]]],
-                    { fields: ['id'], limit: 1 }
-                );
+        // Show success immediately
+        setCompleted(true);
+        setProcessing(false);
+        setSyncStatus('syncing');
 
-                let statementId = false;
-                if (stResp.success && stResp.result && stResp.result.length > 0) {
-                    statementId = stResp.result[0].id;
-                }
+        // Auto-print 2 bills immediately
+        doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
+        doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
 
-                statementIds.push([0, 0, {
-                    journal_id: defaultPl.id,
-                    amount: localUsedPoints,
-                    name: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                    statement_id: statementId
-                }]);
-            }
-            // Calculate the discount distribution ratio for global discounts
-            const ratio = subtotal > 0 ? orderTotal / subtotal : 1;
-            // console.log(orderItems);
-            let lines = orderItems.map(item => {
-                const price = getProductPrice(item.product);
-                // What they would pay for this line specifically due to item-level discount:
-                const itemOriginalTotalForThisLine = getItemTotal(item);
-                // Final amount this line contributes, factoring in bill discounts and points:
-                // const itemFinalTotal = itemOriginalTotalForThisLine * ratio;
-                const rawTotal = price * item.quantity;
-                const effectiveDiscountPct = item.discount.type === 'percent' ? rawTotal - (rawTotal * item.discount.value / 100) : rawTotal - item.discount.value;
-                // const effectiveDiscountPct = rawTotal > 0 ? ((rawTotal - itemFinalTotal) / rawTotal) * 100 : 0;
-                let combo_item_ids = {};
-                if (item.comboItems && item.comboItems.length > 0) {
-                    combo_item_ids = item.comboItems.reduce((acc, comboItem) => {
-                        acc[comboItem.product.id] = comboItem.quantity;
-                        return acc;
-                    }, {});
-                }
-                return [0, 0, {
-                    product_id: item.product.id,
-                    qty: item.quantity,
-                    price_unit: price,
-                    price_subtotal: item.product.tax_id ? parseInt(effectiveDiscountPct / ((100 + item.product.tax_id[0].amount) / 100)) : parseInt(effectiveDiscountPct),
-                    price_subtotal_incl: effectiveDiscountPct,
-                    combo_item_ids: combo_item_ids,
-                    discount_type: item.discount.type,
-                    discount: item.discount.type === 'percent' ? item.discount.value : 0,
-                    discount_amount: item.discount.type === 'amount' ? item.discount.value : 0,
-                    tax_ids: [[6, false, item.product.taxes_id || []]],
-                    note: item.note || '',
-                    plus_point: localUsedPoints > 0 || billDiscountAmount > 0 || earnedPoints <= 0 ? 0 : effectiveDiscountPct / 100,
-                    session_info: {
-                        user: {
-                            id: authData.user.uid,
-                            name: authData.user.name
-                        },
-                        pos: {
-                            id: posConfig.session.id,
-                            name: posConfig.session.name
-                        }
-                    },
-                }];
+        // Auto-print labels if enabled
+        if (posConfig.print_product_label) {
+            printLabel({
+                posName: posConfig?.name || 'SeaPOS',
+                orderItems,
+                ecommerceCode: `Order ${uidId}`,
             });
-            if (billDiscountAmount > 0) {
-                const productDiscount = posData.products.find(pl => pl.allow_discount_global === true) || null;
-                if (productDiscount) {
-                    lines.push([0, 0, {
-                        product_id: productDiscount.id,
-                        qty: -1,
-                        price_unit: billDiscountAmount,
-                        price_subtotal: productDiscount.tax_id ? parseInt(- billDiscountAmount / ((100 + productDiscount.tax_id[0].amount) / 100)) : parseInt(- billDiscountAmount),
-                        price_subtotal_incl: - billDiscountAmount,
-                        discount_reason: 'Global Discount',
-                        tax_ids: [[6, false, productDiscount.taxes_id || []]],
+        }
+
+        // === PHASE 2: Background Odoo sync (fire-and-forget) ===
+        // All values are captured in closure at this point
+        const syncOrderToOdoo = async () => {
+            let orderData = null;
+            try {
+                // Find statement_ids for chosen payment journals under the current open session
+                const statementIds = [];
+                for (const pl of paymentLines) {
+                    const stResp = await window.electronAPI.executeKw(
+                        'account.bank.statement', 'search_read',
+                        [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', pl.journalId]]],
+                        { fields: ['id'], limit: 1 }
+                    );
+
+                    let statementId = false;
+                    if (stResp.success && stResp.result && stResp.result.length > 0) {
+                        statementId = stResp.result[0].id;
+                    }
+
+                    statementIds.push([0, 0, {
+                        journal_id: pl.journalId,
+                        amount: pl.amount,
+                        name: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                        statement_id: statementId
+                    }]);
+                }
+                // check loyalty
+                const defaultPl = paymentJournals.find(pl => pl.code === 'LOYAL') || null;
+                if (defaultPl && localUsedPoints > 0) {
+                    const stResp = await window.electronAPI.executeKw(
+                        'account.bank.statement', 'search_read',
+                        [[['pos_session_id', '=', posConfig.session.id], ['journal_id', '=', defaultPl.id]]],
+                        { fields: ['id'], limit: 1 }
+                    );
+
+                    let statementId = false;
+                    if (stResp.success && stResp.result && stResp.result.length > 0) {
+                        statementId = stResp.result[0].id;
+                    }
+
+                    statementIds.push([0, 0, {
+                        journal_id: defaultPl.id,
+                        amount: localUsedPoints,
+                        name: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                        statement_id: statementId
+                    }]);
+                }
+                // Calculate the discount distribution ratio for global discounts
+                const ratio = subtotal > 0 ? orderTotal / subtotal : 1;
+                // console.log(orderItems);
+                let lines = orderItems.map(item => {
+                    const price = getProductPrice(item.product);
+                    // What they would pay for this line specifically due to item-level discount:
+                    const itemOriginalTotalForThisLine = getItemTotal(item);
+                    // Final amount this line contributes, factoring in bill discounts and points:
+                    // const itemFinalTotal = itemOriginalTotalForThisLine * ratio;
+                    const rawTotal = price * item.quantity;
+                    const effectiveDiscountPct = item.discount.type === 'percent' ? rawTotal - (rawTotal * item.discount.value / 100) : rawTotal - item.discount.value;
+                    // const effectiveDiscountPct = rawTotal > 0 ? ((rawTotal - itemFinalTotal) / rawTotal) * 100 : 0;
+                    let combo_item_ids = {};
+                    if (item.comboItems && item.comboItems.length > 0) {
+                        combo_item_ids = item.comboItems.reduce((acc, comboItem) => {
+                            acc[comboItem.product.id] = comboItem.quantity;
+                            return acc;
+                        }, {});
+                    }
+                    return [0, 0, {
+                        product_id: item.product.id,
+                        qty: item.quantity,
+                        price_unit: price,
+                        price_subtotal: item.product.tax_id ? parseInt(effectiveDiscountPct / ((100 + item.product.tax_id[0].amount) / 100)) : parseInt(effectiveDiscountPct),
+                        price_subtotal_incl: effectiveDiscountPct,
+                        combo_item_ids: combo_item_ids,
+                        discount_type: item.discount.type,
+                        discount: item.discount.type === 'percent' ? item.discount.value : 0,
+                        discount_amount: item.discount.type === 'amount' ? item.discount.value : 0,
+                        tax_ids: [[6, false, item.product.taxes_id || []]],
+                        note: item.note || '',
+                        plus_point: localUsedPoints > 0 || billDiscountAmount > 0 || earnedPoints <= 0 ? 0 : effectiveDiscountPct / 100,
                         session_info: {
                             user: {
                                 id: authData.user.uid,
@@ -327,103 +341,98 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                                 name: posConfig.session.name
                             }
                         },
-                    }]);
-                }
-            }
-            // Local time formatted for Odoo
-            // const tzoffset = 420 * 60000;
-            const localISOTime = (new Date(Date.now())).toISOString().slice(0, 19).replace('T', ' ');
-
-            const now = new Date();
-
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const second = String(now.getSeconds()).padStart(2, '0');
-
-            const timeString = `${hour}${minutes}${second}`;
-            uidId = `${timeString}-${posConfig.session.id}-${authData.user.uid}`;
-
-            const amount_total = lines.reduce((sum, line) => sum + line[2].price_subtotal_incl, 0);
-            const amount_paid = amount_total;
-            const amount_tax = lines.reduce((sum, line) => sum + (line[2].price_subtotal_incl - line[2].price_subtotal), 0);
-
-            orderData = {
-                data: {
-                    name: `Order ${uidId}`,
-                    amount_paid: amount_paid,
-                    amount_return: 0,
-                    amount_tax: amount_tax, // Simplified, modify if tax calculation is needed locally
-                    amount_total: amount_total,
-                    creation_date: localISOTime,
-                    fiscal_position_id: false,
-                    lines: lines,
-                    partner_id: selectedCustomer ? selectedCustomer.id : false,
-                    pricelist_id: selectedPricelist ? selectedPricelist.id : false,
-                    pos_session_id: posConfig.session.id,
-                    plus_point: localUsedPoints > 0 || billDiscountAmount > 0 ? 0 : earnedPoints,
-                    redeem_point: localUsedPoints > 0 ? localUsedPoints : 0,
-                    sequence_number: 1, // Optional placeholder
-                    statement_ids: statementIds,
-                    ecommerce_code: ecommerceCode,
-                    note: note,
-                    table_id: posMode === 'retail' ? false : table.id,
-                    currency_id: posConfig.currency_id[0],
-                    uid: uidId,
-                    user_id: selectedSeller?.id || authData.user.uid,
-                    is_get_invoice: selectedInvoiceCustomer ? true : false,
-                    invoice_address: selectedInvoiceCustomer ? selectedInvoiceCustomer.id : false
-                },
-                id: uidId,
-                to_invoice: true
-            };
-            console.log(orderData);
-            const res = await window.electronAPI.createPosOrder(orderData);
-            if (!res.success) {
-                throw new Error(res.error);
-            }
-
-            setCompleted(true);
-
-            // Auto-print 2 bills after successful payment
-            doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
-            doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
-
-            // Auto-print labels after successful payment (only if enabled in POS config)
-            if (posConfig.print_product_label) {
-                printLabel({
-                    posName: posConfig?.name || 'SeaPOS',
-                    orderItems,
-                    ecommerceCode: `Order ${uidId}`,
+                    }];
                 });
-            }
-        } catch (err) {
-            console.error("Lỗi thanh toán:", err);
-
-            // Save to offline queue instead of blocking
-            if (offlineQueue && offlineQueue.addFailedOrder && orderData) {
-                offlineQueue.addFailedOrder(orderData, err);
-
-                // Still complete the order so cashier can continue
-                setCompleted(true);
-
-                // Still print 2 bills and labels even on network failure
-                doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
-                doPrintBill('HÓA ĐƠN BÁN HÀNG', `Order ${uidId}`);
-
-                if (posConfig.print_product_label) {
-                    printLabel({
-                        posName: posConfig?.name || 'SeaPOS',
-                        orderItems,
-                        ecommerceCode: `Order ${uidId}`,
-                    });
+                if (billDiscountAmount > 0) {
+                    const productDiscount = posData.products.find(pl => pl.allow_discount_global === true) || null;
+                    if (productDiscount) {
+                        lines.push([0, 0, {
+                            product_id: productDiscount.id,
+                            qty: -1,
+                            price_unit: billDiscountAmount,
+                            price_subtotal: productDiscount.tax_id ? parseInt(- billDiscountAmount / ((100 + productDiscount.tax_id[0].amount) / 100)) : parseInt(- billDiscountAmount),
+                            price_subtotal_incl: - billDiscountAmount,
+                            discount_reason: 'Global Discount',
+                            tax_ids: [[6, false, productDiscount.taxes_id || []]],
+                            session_info: {
+                                user: {
+                                    id: authData.user.uid,
+                                    name: authData.user.name
+                                },
+                                pos: {
+                                    id: posConfig.session.id,
+                                    name: posConfig.session.name
+                                }
+                            },
+                        }]);
+                    }
                 }
-            } else {
-                // Error happened before orderData was built — show alert
-                alert("Lỗi thanh toán: " + err.message);
+                // Local time formatted for Odoo
+                // const tzoffset = 420 * 60000;
+                const localISOTime = (new Date(Date.now())).toISOString().slice(0, 19).replace('T', ' ');
+
+                const amount_total = lines.reduce((sum, line) => sum + line[2].price_subtotal_incl, 0);
+                const amount_paid = amount_total;
+                const amount_tax = lines.reduce((sum, line) => sum + (line[2].price_subtotal_incl - line[2].price_subtotal), 0);
+
+                orderData = {
+                    data: {
+                        name: `Order ${uidId}`,
+                        amount_paid: amount_paid,
+                        amount_return: 0,
+                        amount_tax: amount_tax, // Simplified, modify if tax calculation is needed locally
+                        amount_total: amount_total,
+                        creation_date: localISOTime,
+                        fiscal_position_id: false,
+                        lines: lines,
+                        partner_id: selectedCustomer ? selectedCustomer.id : false,
+                        pricelist_id: selectedPricelist ? selectedPricelist.id : false,
+                        pos_session_id: posConfig.session.id,
+                        plus_point: localUsedPoints > 0 || billDiscountAmount > 0 ? 0 : earnedPoints,
+                        redeem_point: localUsedPoints > 0 ? localUsedPoints : 0,
+                        sequence_number: 1, // Optional placeholder
+                        statement_ids: statementIds,
+                        ecommerce_code: ecommerceCode,
+                        note: note,
+                        table_id: posMode === 'retail' ? false : table.id,
+                        currency_id: posConfig.currency_id[0],
+                        uid: uidId,
+                        user_id: selectedSeller?.id || authData.user.uid,
+                        is_get_invoice: selectedInvoiceCustomer ? true : false,
+                        invoice_address: selectedInvoiceCustomer ? selectedInvoiceCustomer.id : false
+                    },
+                    id: uidId,
+                    to_invoice: true
+                };
+                console.log(orderData);
+                const res = await window.electronAPI.createPosOrder(orderData);
+                if (!res.success) {
+                    throw new Error(res.error);
+                }
+
+                // Background sync succeeded
+                if (mountedRef.current) {
+                    setSyncStatus('success');
+                    setTimeout(() => { if (mountedRef.current) setSyncStatus('idle'); }, 3000);
+                }
+            } catch (err) {
+                console.error("Lỗi đồng bộ đơn hàng:", err);
+
+                // Save to offline queue for later retry
+                if (offlineQueue && offlineQueue.addFailedOrder && orderData) {
+                    offlineQueue.addFailedOrder(orderData, err);
+                }
+
+                if (mountedRef.current) {
+                    setSyncStatus('failed');
+                    setSyncError(err.message);
+                    setTimeout(() => { if (mountedRef.current) setSyncStatus('idle'); }, 5000);
+                }
             }
-        } finally {
-            setProcessing(false);
-        }
+        };
+
+        // Fire-and-forget — don't await, let it run in background
+        syncOrderToOdoo();
     };
 
     const handleDone = () => {
@@ -480,6 +489,21 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                         ✅ Hoàn tất {isRetail ? '— Đơn hàng mới' : '— Về danh sách bàn'}
                     </button>
                 </div>
+
+                {/* Background sync status toast */}
+                {syncStatus !== 'idle' && (
+                    <div className={`sync-toast sync-toast-${syncStatus}`}>
+                        {syncStatus === 'syncing' && (
+                            <><span className="sync-toast-spinner"></span> Đang đồng bộ lên hệ thống...</>
+                        )}
+                        {syncStatus === 'success' && (
+                            <>✅ Đã đồng bộ lên hệ thống thành công</>
+                        )}
+                        {syncStatus === 'failed' && (
+                            <>⚠️ Đồng bộ thất bại — đơn sẽ được lưu để gửi lại sau</>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }

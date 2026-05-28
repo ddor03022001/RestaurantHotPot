@@ -1188,3 +1188,67 @@
         width: 280px;
     }
 }
+
+/* ===== Background Sync Toast ===== */
+.sync-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    animation: syncToastSlideUp 0.3s ease-out;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.sync-toast-syncing {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+}
+
+.sync-toast-success {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+}
+
+.sync-toast-failed {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.sync-toast-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(147, 197, 253, 0.3);
+    border-top-color: #93c5fd;
+    border-radius: 50%;
+    animation: syncSpin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes syncToastSlideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes syncSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}

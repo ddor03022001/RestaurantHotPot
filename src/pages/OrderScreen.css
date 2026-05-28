@@ -2419,6 +2419,40 @@
     cursor: not-allowed;
 }
 
+.offline-queue-item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.offline-queue-item-retry {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.offline-queue-item-retry:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
+}
+
+.offline-queue-item-retry:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 /* ===== Responsive: Small POS Screens ===== */
 
 /* Height <= 800px: Standard POS (1024x768, 1280x720) */

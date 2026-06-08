@@ -181,7 +181,8 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
                     subTotal: rawTotal,
                     tax: 0,
                     total: orderTotal
-                }
+                },
+                posConfig: posConfig
             });
         }
     }, [orderItems, rawTotal, orderTotal]);

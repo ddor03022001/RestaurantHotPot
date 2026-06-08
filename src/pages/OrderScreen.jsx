@@ -625,7 +625,8 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                     tax: 0,
                     totalDiscount: billDiscountAmount,
                     total: orderTotal
-                }
+                },
+                posConfig: posConfig
             });
         }
     }, [orderItems, subtotal, orderTotal]);

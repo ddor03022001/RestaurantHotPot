@@ -10,7 +10,8 @@ const CustomerScreen = () => {
             subTotal: 0,
             tax: 0,
             total: 0
-        }
+        },
+        posConfig: null
     });
     const [qrCodeUrl, setQrCodeUrl] = useState(null);
     const [qrLoading, setQrLoading] = useState(false);
@@ -45,7 +46,7 @@ const CustomerScreen = () => {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    const { screen, items, totalData } = displayState;
+    const { screen, items, totalData, posConfig } = displayState;
 
     // Build video URL: if path is an absolute file path, convert to local-video:// URL
     // (Electron blocks file:// in renderer, so we use a custom protocol registered in main.js)
@@ -65,7 +66,7 @@ const CustomerScreen = () => {
             if (totalAmount > 0 && window.electronAPI && window.electronAPI.getApiQrCode) {
                 setQrLoading(true);
                 setQrCodeUrl(null);
-                window.electronAPI.getApiQrCode(totalAmount).then((data) => {
+                window.electronAPI.getApiQrCode(totalAmount, posConfig).then((data) => {
                     if (data && data.qrDataURL) {
                         setQrCodeUrl(data.qrDataURL);
                     }

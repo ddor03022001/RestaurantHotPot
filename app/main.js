@@ -380,25 +380,25 @@ ipcMain.handle('odoo:createInternalTransfer', async (event, pickingData) => {
 
 // get vietQR
 
-ipcMain.handle('get-api-qrcode', async (_, totalAmount) => {
+ipcMain.handle('get-api-qrcode', async (_, totalAmount, posConfig) => {
     try {
         const apiUrl = 'https://api.vietqr.io/v2/generate';
 
         const payload = {
-            accountNo: '8650025365',
-            accountName: 'CTY TNHH DANNYGREEN RETAIL FRANCHISE',
-            acqId: '970418',
+            accountNo: posConfig.account_no,
+            accountName: posConfig.account_name,
+            acqId: posConfig.account_id,
             amount: totalAmount,
             addInfo: "Thanh toán đơn hàng POS",
             format: "text",
-            template: "vasPO3E"
+            template: "compact"
         };
 
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'x-api-key': '106f81f6-abff-42ea-9b1b-c07538846b6e',
-                'x-client-id': '106f81f6-abff-42ea-9b1b-c07538846b6e',
+                'x-api-key': posConfig.apikey_qrcode_viet,
+                'x-client-id': posConfig.client_id_qrcode_viet,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)

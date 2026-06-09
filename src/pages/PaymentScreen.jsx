@@ -88,7 +88,13 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
     const [showEcommerceCodePopup, setShowEcommerceCodePopup] = useState(false);
     const [tempEcommerceCode, setTempEcommerceCode] = useState('');
     const [showLabelPopup, setShowLabelPopup] = useState(false);
-    const [selectedSeller, setSelectedSeller] = useState(null);
+    const [selectedSeller, setSelectedSeller] = useState(() => {
+        if (posConfig.default_seller_id && posConfig.seller_ids && posConfig.seller_ids.length > 0) {
+            const defaultSellerId = Array.isArray(posConfig.default_seller_id) ? posConfig.default_seller_id[0] : posConfig.default_seller_id;
+            return posConfig.seller_ids.find(s => s.id === defaultSellerId) || null;
+        }
+        return null;
+    });
     const [showSellerPopup, setShowSellerPopup] = useState(false);
 
     // Background sync status for toast notification
@@ -465,6 +471,8 @@ function PaymentScreen({ authData, posConfig, posData, table, onBack, onComplete
             discountAmount: totalDiscount,
             note: note || '',
             ecommerceCode: ecommerceCode || '',
+            paymentLines: paymentLines,
+            changeAmount: changeAmount,
         });
     };
 

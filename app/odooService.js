@@ -99,7 +99,7 @@ class OdooService {
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
                 'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer',
                 'enable_dynamic_qrcode_viet', 'apikey_qrcode_viet', 'client_id_qrcode_viet', 'account_no', 'account_name', 'account_id',
-                'seller_ids', 'internal_transfer', 'operation_type_internal_transfer', 'print_product_label', 'module_pos_restaurant'
+                'seller_ids', 'default_seller_id', 'internal_transfer', 'operation_type_internal_transfer', 'print_product_label', 'module_pos_restaurant'
             ],
         });
 
@@ -204,7 +204,10 @@ class OdooService {
         const products = await OdooService._execute(url, db, uid, password, 'product.product', 'search_read',
             [[['sale_ok', '=', true], ['available_in_pos', '=', true]]],
             {
-                fields: ['id', 'name', 'type', 'display_name', 'taxes_id', 'allow_discount_global', 'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids', 'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp', 'product_mrp_ids', 'print_product_label', 'uom_id'],
+                fields: ['id', 'name', 'type', 'display_name', 'taxes_id', 'allow_discount_global',
+                    'list_price', 'pos_categ_id', 'image_small', 'is_combo', 'pos_combo_item_ids',
+                    'barcode', 'default_code', 'categ_id', 'product_tmpl_id', 'is_pos_mrp',
+                    'product_mrp_ids', 'print_product_label', 'uom_id', 'sea_unit_of_measure'],
             }
         );
 

@@ -815,11 +815,16 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                                         {totalQty > 0 && <div className="order-product-qty-badge">{totalQty}</div>}
                                         <div className="order-product-name">{product.display_name || product.name}</div>
                                         <div className="order-product-price">{formatPrice(getProductPrice(product))}</div>
-                                        {product.pos_categ_id && (
+                                        {product.sea_unit_of_measure && (
+                                            <div className="order-product-uom">
+                                                ⚖️ {product.sea_unit_of_measure[1]}
+                                            </div>
+                                        )}
+                                        {/* {product.pos_categ_id && (
                                             <div className="order-product-cat">
                                                 {Array.isArray(product.pos_categ_id) ? product.pos_categ_id[1] : ''}
                                             </div>
-                                        )}
+                                        )} */}
                                         {product.type === 'product' && (
                                             <div className={`order-product-stock ${product.qty_available <= 0 ? 'stock-empty' : ''}`}>
                                                 📦 {product.qty_available || 0}

@@ -23,6 +23,8 @@ import { formatPrice } from './formatters';
  * @param {string} [options.note] - Order note
  * @param {string} [options.ecommerceCode] - Ecommerce code
  * @param {string} [options.companyInvoice] - Company invoice
+ * @param {Array<{journalName: string, amount: number}>} [options.paymentLines] - Payment method lines
+ * @param {number} [options.changeAmount] - Change amount to return to customer
  * @returns {string} Complete HTML document string
  */
 export function generateBillHTML({
@@ -38,6 +40,8 @@ export function generateBillHTML({
     note = '',
     ecommerceCode = '',
     companyInvoice = '',
+    paymentLines = [],
+    changeAmount = 0,
 }) {
     const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n));
     const preDiscountTotal = totalAmount + discountAmount;
@@ -128,6 +132,11 @@ export function generateBillHTML({
             margin-bottom: 15px;
         }
 
+        /* Payment methods */
+        .payment-methods-container { margin-top: 2px; padding-top: 4px; border-top: 1px dashed #000; }
+        .payment-method-line { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; padding: 2px 0; }
+        .change-line { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; padding: 2px 0; border-top: 1px dashed #000; margin-top: 2px; }
+
         /* Footer */
         .footer { text-align: center; font-size: 11px; font-weight: bold; line-height: 1.4; }
         .footer-thanks { font-style: italic; margin-top: 8px; }
@@ -181,6 +190,22 @@ export function generateBillHTML({
             <span>Số tiền cần thanh toán:</span>
             <span>${fmt(totalAmount)}<span class="currency">đ</span></span>
         </div>
+        ${paymentLines.length > 0 ? `
+        <div class="payment-methods-container">
+            ${paymentLines.map(pl => `
+            <div class="payment-method-line">
+                <span>${pl.journalName}:</span>
+                <span>${fmt(pl.amount)}<span class="currency">đ</span></span>
+            </div>
+            `).join('')}
+            ${changeAmount > 0 ? `
+            <div class="change-line">
+                <span>Tiền thừa:</span>
+                <span>${fmt(changeAmount)}<span class="currency">đ</span></span>
+            </div>
+            ` : ''}
+        </div>
+        ` : ''}
     </div>
 
     <div class="footer">

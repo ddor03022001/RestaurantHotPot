@@ -93,7 +93,12 @@ function App() {
         } else {
             setTables(createInitialTables());
         }
-        if (posMode === 'retail') {
+        // If module_pos_restaurant is disabled, force retail mode
+        const effectiveMode = config.module_pos_restaurant === false ? 'retail' : posMode;
+        if (config.module_pos_restaurant === false && posMode !== 'retail') {
+            setPosMode('retail');
+        }
+        if (effectiveMode === 'retail') {
             // Go directly to order screen with a virtual counter
             setActiveTableId(0);
             setScreen('order');
@@ -213,6 +218,10 @@ function App() {
     };
 
     const handleToggleMode = (mode) => {
+        // Block switching to restaurant mode if module_pos_restaurant is disabled
+        if (mode === 'restaurant' && posConfig?.module_pos_restaurant === false) {
+            return;
+        }
         setPosMode(mode);
         if (mode === 'retail' && posConfig) {
             // Switch to retail: go to order screen with virtual counter

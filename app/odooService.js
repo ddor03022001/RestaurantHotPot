@@ -99,7 +99,7 @@ class OdooService {
                 'current_session_id', 'current_session_state', 'journal_ids', 'pos_mrp', 'pos_branch_id',
                 'location_dest_id', 'mrp_picking_type_id', 'enable_button_loyalty_point', 'receipt_header', 'receipt_footer',
                 'enable_dynamic_qrcode_viet', 'apikey_qrcode_viet', 'client_id_qrcode_viet', 'account_no', 'account_name', 'account_id',
-                'seller_ids', 'internal_transfer', 'operation_type_internal_transfer', 'print_product_label'
+                'seller_ids', 'internal_transfer', 'operation_type_internal_transfer', 'print_product_label', 'module_pos_restaurant'
             ],
         });
 

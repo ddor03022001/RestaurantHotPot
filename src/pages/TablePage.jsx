@@ -278,13 +278,15 @@ function TablePage({ authData, posConfig, posData, tables, setTables, onBack, on
                     <button className="btn btn-secondary" onClick={onGoToManagement}>📊 Quản lý</button>
                 </div>
                 <div className="table-mode-toggle">
-                    <button
-                        className={`table-mode-btn ${posMode === 'restaurant' ? 'table-mode-btn-active' : ''}`}
-                        onClick={() => onToggleMode('restaurant')}
-                        title="Chế độ nhà hàng"
-                    >
-                        🍽️ Nhà hàng
-                    </button>
+                    {posConfig?.module_pos_restaurant !== false && (
+                        <button
+                            className={`table-mode-btn ${posMode === 'restaurant' ? 'table-mode-btn-active' : ''}`}
+                            onClick={() => onToggleMode('restaurant')}
+                            title="Chế độ nhà hàng"
+                        >
+                            🍽️ Nhà hàng
+                        </button>
+                    )}
                     <button
                         className={`table-mode-btn ${posMode === 'retail' ? 'table-mode-btn-active' : ''}`}
                         onClick={() => onToggleMode('retail')}

@@ -662,13 +662,15 @@ function OrderScreen({ authData, posConfig, posData, table, updateTable, onBack,
                 <div className="order-header-toolbar">
                     {/* Mode toggle */}
                     <div className="order-mode-toggle">
-                        <button
-                            className={`order-mode-btn ${!isRetail ? 'order-mode-btn-active' : ''}`}
-                            onClick={() => onToggleMode('restaurant')}
-                            title="Chế độ nhà hàng — hiển thị danh sách bàn"
-                        >
-                            🍽️ Nhà hàng
-                        </button>
+                        {posConfig?.module_pos_restaurant !== false && (
+                            <button
+                                className={`order-mode-btn ${!isRetail ? 'order-mode-btn-active' : ''}`}
+                                onClick={() => onToggleMode('restaurant')}
+                                title="Chế độ nhà hàng — hiển thị danh sách bàn"
+                            >
+                                🍽️ Nhà hàng
+                            </button>
+                        )}
                         <button
                             className={`order-mode-btn ${isRetail ? 'order-mode-btn-active' : ''}`}
                             onClick={() => onToggleMode('retail')}
